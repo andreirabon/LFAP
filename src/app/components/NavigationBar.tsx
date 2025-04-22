@@ -43,6 +43,17 @@ const LeaveRequestContent = () => {
       <div className="grid gap-2">
         <NavigationMenuLink asChild>
           <Link
+            href="/leave-request/personal-information"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Personal Information</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+              View and update your personal information.
+            </p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild></NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
             href="/leave-request/file-leave"
             className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
             <div className="text-sm font-medium leading-none">File Leave</div>
@@ -120,8 +131,9 @@ export default function NavigationBar() {
 
   // Mock user data - replace with actual user context/auth
   const user = {
-    name: "John Doe",
-    role: "Employee",
+    name: "Andrei Rabon",
+    role: "Admin",
+    // role: "Employee",
     // role: "Manager",
     // role: "Hr Admin",
     // role: "Top Management",
