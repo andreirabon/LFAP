@@ -1,4 +1,4 @@
-import NavigationBar from "@/app/NavigationBar";
+import NavigationBar from "@/app/components/NavigationBar";
 import type { Metadata } from "next";
 import "./globals.css";
 
