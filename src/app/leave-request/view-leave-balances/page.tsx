@@ -8,6 +8,7 @@ interface LeaveBalance {
   used: number;
   remaining: number;
   description: string;
+  color: string;
 }
 
 const leaveBalances: LeaveBalance[] = [
@@ -17,6 +18,7 @@ const leaveBalances: LeaveBalance[] = [
     used: 5,
     remaining: 10,
     description: "Annual vacation leave for rest and recreation",
+    color: "text-blue-600",
   },
   {
     type: "Mandatory/Force Leave",
@@ -24,6 +26,7 @@ const leaveBalances: LeaveBalance[] = [
     used: 2,
     remaining: 3,
     description: "Required leave days that must be taken within the year",
+    color: "text-purple-600",
   },
   {
     type: "Sick Leave",
@@ -31,6 +34,7 @@ const leaveBalances: LeaveBalance[] = [
     used: 3,
     remaining: 12,
     description: "Leave for medical reasons and recovery",
+    color: "text-red-600",
   },
   {
     type: "Maternity Leave",
@@ -38,6 +42,7 @@ const leaveBalances: LeaveBalance[] = [
     used: 0,
     remaining: 105,
     description: "Leave for childbirth and maternal care",
+    color: "text-pink-600",
   },
   {
     type: "Special Privilege Leave",
@@ -45,6 +50,7 @@ const leaveBalances: LeaveBalance[] = [
     used: 1,
     remaining: 2,
     description: "Leave for special occasions or personal matters",
+    color: "text-green-600",
   },
 ];
 
@@ -63,13 +69,13 @@ export default function ViewLeaveBalances() {
               <TooltipTrigger asChild>
                 <Card className="hover:bg-accent/5 transition-colors">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{leave.type}</CardTitle>
+                    <CardTitle className={`text-lg ${leave.color}`}>{leave.type}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <Progress
                         value={(leave.remaining / leave.total) * 100}
-                        className="h-2"
+                        className={`h-2 [&>div]:bg-current ${leave.color}`}
                       />
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Used: {leave.used} days</span>
