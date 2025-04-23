@@ -222,7 +222,8 @@ export default function EndorseLeaveRequest() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  This section would display the team's availability and schedule during the requested leave period.
+                  This section would display the team&apos;s availability and schedule during the requested leave
+                  period.
                 </p>
               </CardContent>
             </Card>

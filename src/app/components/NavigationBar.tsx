@@ -87,7 +87,7 @@ const LeaveRequestContent = () => {
   );
 };
 
-const ApprovalsContent = () => {
+const EndorsementsContent = () => {
   return (
     <NavigationMenuContent className="grid gap-3 p-4 w-[400px] md:w-[500px] lg:w-[600px]">
       <div className="grid gap-4">
@@ -96,7 +96,9 @@ const ApprovalsContent = () => {
             href="/endorse/team-calendar"
             className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
             <div className="text-sm font-medium leading-none">View Team Calendar</div>
-            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View your team's leave schedule.</p>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+              View your team&apos;s leave schedule.
+            </p>
           </Link>
         </NavigationMenuLink>
         <NavigationMenuLink asChild>
@@ -117,6 +119,39 @@ const ApprovalsContent = () => {
             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
               View leave balances of your subordinates.
             </p>
+          </Link>
+        </NavigationMenuLink>
+      </div>
+    </NavigationMenuContent>
+  );
+};
+
+const ApprovalsContent = () => {
+  return (
+    <NavigationMenuContent className="grid gap-3 p-4 w-[400px] md:w-[500px] lg:w-[600px]">
+      <div className="grid gap-4">
+        <NavigationMenuLink asChild>
+          <Link
+            href="/approvals/pending-approvals"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Pending Approvals</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View all pending approvals.</p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
+            href="/approvals/approved-approvals"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Approved Approvals</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View all approved approvals.</p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
+            href="/approvals/rejected-approvals"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Rejected Approvals</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View all rejected approvals.</p>
           </Link>
         </NavigationMenuLink>
       </div>
@@ -180,7 +215,7 @@ export default function NavigationBar() {
                   )}>
                   Endorsements
                 </NavigationMenuTrigger>
-                <ApprovalsContent />
+                <EndorsementsContent />
               </NavigationMenuItem>
 
               <NavigationMenuItem>
