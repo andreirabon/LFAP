@@ -93,31 +93,29 @@ const ApprovalsContent = () => {
       <div className="grid gap-4">
         <NavigationMenuLink asChild>
           <Link
-            href="/approvals/pending"
+            href="/endorse/team-calendar"
             className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-            <div className="text-sm font-medium leading-none">Pending Approvals</div>
+            <div className="text-sm font-medium leading-none">View Team Calendar</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View your team's leave schedule.</p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
+            href="/endorse/endorse-leave-request"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Endorse Leave Request</div>
             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-              Review and process pending leave requests from your team.
+              Endorse leave requests from your team.
             </p>
           </Link>
         </NavigationMenuLink>
         <NavigationMenuLink asChild>
           <Link
-            href="/approvals/processed"
+            href="/endorse/view-leave-balances"
             className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-            <div className="text-sm font-medium leading-none">Processed Requests</div>
+            <div className="text-sm font-medium leading-none">View Leave Balances of Subordinates</div>
             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-              View history of leave requests you&apos;ve processed.
-            </p>
-          </Link>
-        </NavigationMenuLink>
-        <NavigationMenuLink asChild>
-          <Link
-            href="/approvals/delegated"
-            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-            <div className="text-sm font-medium leading-none">Delegated Approvals</div>
-            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-              Manage approval permissions delegated to other approvers.
+              View leave balances of your subordinates.
             </p>
           </Link>
         </NavigationMenuLink>
@@ -178,9 +176,19 @@ export default function NavigationBar() {
               <NavigationMenuItem>
                 <NavigationMenuTrigger
                   className={cn(
+                    pathname.startsWith("/endorse") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  )}>
+                  Endorsements
+                </NavigationMenuTrigger>
+                <ApprovalsContent />
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuTrigger
+                  className={cn(
                     pathname.startsWith("/approvals") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
                   )}>
-                  Endorsements/Approvals
+                  Approvals
                 </NavigationMenuTrigger>
                 <ApprovalsContent />
               </NavigationMenuItem>

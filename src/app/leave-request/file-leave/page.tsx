@@ -59,22 +59,37 @@ const leaveBalances: LeaveBalance[] = [
 ];
 
 // Form schema
-const formSchema = z.object({
-  leaveType: z.string({
-    required_error: "Please select a leave type",
-  }),
-  startDate: z.date({
-    required_error: "Start date is required",
-  }),
-  endDate: z.date({
-    required_error: "End date is required",
-  }),
-  reason: z.string().min(10, "Reason must be at least 10 characters").max(500, "Reason must not exceed 500 characters"),
-  supportingDocs: z
-    .array(z.instanceof(File))
-    .optional()
-    .transform((files) => (files?.length ? files : undefined)),
-});
+const formSchema = z
+  .object({
+    leaveType: z.string({
+      required_error: "Please select a leave type",
+    }),
+    startDate: z.date({
+      required_error: "Start date is required",
+    }),
+    endDate: z.date({
+      required_error: "End date is required",
+    }),
+    reason: z
+      .string()
+      .min(10, "Reason must be at least 10 characters")
+      .max(500, "Reason must not exceed 500 characters"),
+    supportingDocs: z
+      .array(z.instanceof(File))
+      .optional()
+      .transform((files) => (files?.length ? files : undefined)),
+  })
+  .refine(
+    (data) => {
+      const start = DateTime.fromJSDate(data.startDate);
+      const end = DateTime.fromJSDate(data.endDate);
+      return end >= start;
+    },
+    {
+      message: "End date must be after start date",
+      path: ["endDate"],
+    },
+  );
 
 export default function FileLeave() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +117,13 @@ export default function FileLeave() {
       setIsSubmitting(false);
     }
   }
+
+  // Update the Calendar disabled dates logic
+  const isDateDisabled = (date: Date) => {
+    const today = DateTime.now().startOf("day");
+    const checkDate = DateTime.fromJSDate(date);
+    return checkDate < today || checkDate.weekday > 5; // Disable weekends and past dates
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -182,7 +204,7 @@ export default function FileLeave() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            disabled={isDateDisabled}
                             initialFocus
                           />
                         </PopoverContent>
@@ -222,7 +244,7 @@ export default function FileLeave() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                            disabled={isDateDisabled}
                             initialFocus
                           />
                         </PopoverContent>
