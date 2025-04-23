@@ -4,7 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 
 const interFont = localFont({
-  src: "../../public/inter.ttf",
+  src: "./fonts/Inter.ttf",
   display: "swap",
 });
 
