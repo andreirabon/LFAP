@@ -24,17 +24,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-interface NavLink {
-  href: string;
-  label: string;
-}
+// interface NavLink {
+//   href: string;
+//   label: string;
+// }
 
-const navLinks: NavLink[] = [
-  { href: "/leave-request", label: "Leave Request" },
-  { href: "/approvals", label: "Endorsements/Approvals" },
-  { href: "/leave-balance-management", label: "Leave Balance Management" },
-  { href: "/audit-trail", label: "Audit Trail" },
-];
+// const navLinks: NavLink[] = [
+//   { href: "/leave-request", label: "Leave Request" },
+//   { href: "/approvals", label: "Endorsements/Approvals" },
+//   { href: "/leave-balance-management", label: "Leave Balance Management" },
+//   { href: "/audit-trail", label: "Audit Trail" },
+// ];
 
 // Sample submenu components
 const LeaveRequestContent = () => {
