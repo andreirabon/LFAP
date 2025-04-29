@@ -1,70 +1,106 @@
 "use client";
 
-import { useState } from "react";
-
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import Image from "next/image";
+import { useActionState, useEffect, useState } from "react";
+import { loginUser } from "./actions";
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [state, formAction] = useActionState(loginUser, null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Placeholder for login functionality
-    console.log("Login attempt with:", { email, password });
+  useEffect(() => {
+    if (state) {
+      setIsLoading(false);
+    }
+  }, [state]);
+
+  const handleSubmit = (formData: FormData) => {
+    setIsLoading(true);
+    formAction(formData);
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-white via-white to-white">
-      <div className="absolute inset-0 bg-grid-gray-100/[0.05] bg-[size:60px_60px]" />
-      <div className="w-full max-w-md p-8 rounded-lg shadow-sm bg-background border">
-        <h1 className="text-2xl font-semibold text-center mb-2">Department of Science and Technology</h1>
-        <h2 className="text-xl font-bold text-[#49C4D3] text-center mb-8">Leave Filing and Approval System</h2>
-
-        <form
-          onSubmit={handleLogin}
-          className="space-y-6">
-          <div className="space-y-2">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full h-9 px-4 py-2 rounded-md bg-[#49C4D3] text-white hover:bg-[#49C4D3]/90 text-sm font-medium shadow-xs transition-colors">
-            Login
-          </button>
-        </form>
-
-        <p className="text-xs text-muted-foreground text-center mt-6">
-          Having trouble logging in? Contact the IT Department.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <Card className="w-full max-w-md shadow-xl rounded-lg border">
+        <CardHeader className="text-center">
+          <Image
+            src="/dost_login.png"
+            alt="DOST Logo"
+            width={200}
+            height={20}
+            className="mx-auto h-auto w-auto"
+          />
+          <CardDescription className="text-[#01AFF6] text-xl">Leave Filing and Approval System</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            action={handleSubmit}
+            className="space-y-4">
+            {state?.message && (
+              <p className={cn("text-sm font-medium", state.success ? "text-green-600" : "text-red-600")}>
+                {state.message}
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label
+                htmlFor="email"
+                className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-500" />
+                Email
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="password"
+                className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-gray-500" />
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-foreground"
+                  onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-[#01AFF6] hover:bg-[#01AFF6]"
+              disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+            <div className="text-center text-sm text-muted-foreground mt-4">
+              Having trouble logging in? Contact the IT Department
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

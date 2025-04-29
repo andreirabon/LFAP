@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface LeaveBalance {
   annual: number;
@@ -158,7 +159,28 @@ function formatDate(dateString: string): string {
 }
 
 export default function RejectedApprovals() {
+  const router = useRouter();
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+        if (!data.isLoggedIn) {
+          router.push("/login");
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        router.push("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">

@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
@@ -93,6 +94,28 @@ const formSchema = z
 
 export default function FileLeave() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

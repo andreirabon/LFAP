@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // TypeScript interfaces
 interface LeaveBalance {
@@ -58,6 +59,27 @@ export default function ViewLeaveBalances() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Subordinate[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleSearch = () => {
     const results = sampleSubordinates.filter((subordinate) =>

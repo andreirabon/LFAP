@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // Types
@@ -85,9 +86,35 @@ function formatDate(dateString: string) {
 }
 
 export default function EndorseLeaveRequest() {
+  const router = useRouter();
   const [requests, setRequests] = useState<LeaveRequest[]>(sampleLeaveRequests);
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [managerComments, setManagerComments] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+          return;
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleRequestSelect = (request: LeaveRequest) => {
     setSelectedRequest(request);
@@ -127,6 +154,16 @@ export default function EndorseLeaveRequest() {
     };
     return colors[status];
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">

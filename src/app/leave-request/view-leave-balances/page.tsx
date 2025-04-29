@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 interface LeaveBalance {
   type: string;
@@ -54,7 +56,14 @@ const leaveBalances: LeaveBalance[] = [
   },
 ];
 
-export default function ViewLeaveBalances() {
+export default async function ViewLeaveBalances() {
+  // Check if user is logged in
+  const session = await getSession();
+
+  if (!session.isLoggedIn) {
+    redirect("/login");
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">

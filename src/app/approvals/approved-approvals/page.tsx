@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { DateTime } from "luxon";
-import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 interface LeaveRequest {
   id: string;
@@ -150,7 +151,26 @@ const sampleRequestHistory: Record<string, RequestHistoryItem[]> = {
 };
 
 export default function ApprovedApprovals() {
+  const router = useRouter();
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   return (
     <div className="container mx-auto py-6">

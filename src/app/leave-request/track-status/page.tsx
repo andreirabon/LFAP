@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 interface LeaveRequest {
   id: string;
@@ -59,7 +61,13 @@ function formatDate(dateString: string) {
   });
 }
 
-export default function TrackStatus() {
+export default async function TrackStatus() {
+  const session = await getSession();
+
+  if (!session.isLoggedIn) {
+    redirect("/login");
+  }
+
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="mb-8">

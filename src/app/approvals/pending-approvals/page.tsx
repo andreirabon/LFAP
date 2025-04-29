@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface LeaveBalance {
   annual: number;
@@ -98,6 +99,28 @@ const sampleLeaveRequests: LeaveRequest[] = [
 export default function PendingApprovals() {
   const [requests, setRequests] = useState<LeaveRequest[]>(sampleLeaveRequests);
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleAction = (requestId: string, action: "Approved" | "Rejected") => {
     setRequests((prevRequests) =>

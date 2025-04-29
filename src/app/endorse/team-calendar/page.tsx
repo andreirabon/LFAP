@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DateTime } from "luxon";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface LeaveEntry {
   id: string;
@@ -56,9 +57,30 @@ const leaveTypeColors = {
 };
 
 export default function TeamCalendar() {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(DateTime.now());
   const [selectedLeave, setSelectedLeave] = useState<LeaveEntry | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+        if (!data.isLoggedIn) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate((prev) => (direction === "prev" ? prev.minus({ months: 1 }) : prev.plus({ months: 1 })));

@@ -23,20 +23,8 @@ import { LogOut, Menu, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-// interface NavLink {
-//   href: string;
-//   label: string;
-// }
-
-// const navLinks: NavLink[] = [
-//   { href: "/leave-request", label: "Leave Request" },
-//   { href: "/approvals", label: "Endorsements/Approvals" },
-//   { href: "/leave-balance-management", label: "Leave Balance Management" },
-//   { href: "/audit-trail", label: "Audit Trail" },
-// ];
-
-// Sample submenu components
 const LeaveRequestContent = () => {
   return (
     <NavigationMenuContent className="grid gap-3 p-4 w-[400px] md:w-[500px] lg:w-[600px]">
@@ -196,18 +184,60 @@ const ApprovalsContent = () => {
 
 export default function NavigationBar() {
   const pathname = usePathname();
-
-  // Mock user data - replace with actual user context/auth
-  const user = {
-    name: "Andrei Rabon",
-    role: "Admin",
-    // role: "Employee",
-    // role: "Manager",
-    // role: "Hr Admin",
-    // role: "Top Management",
-    // role: "Admin",
+  const [user, setUser] = useState<{
+    name: string;
+    role: string;
+    avatar: string | null;
+    isLoggedIn: boolean;
+  }>({
+    name: "",
+    role: "",
     avatar: null,
-  };
+    isLoggedIn: false,
+  });
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          throw new Error("Failed to fetch session");
+        }
+        const data = await response.json();
+
+        if (data.isLoggedIn) {
+          setUser({
+            name: `${data.firstName} ${data.lastName}`,
+            role: data.role,
+            avatar: null,
+            isLoggedIn: true,
+          });
+        } else {
+          setUser({
+            name: "",
+            role: "",
+            avatar: null,
+            isLoggedIn: false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch session:", error);
+        setUser({
+          name: "",
+          role: "",
+          avatar: null,
+          isLoggedIn: false,
+        });
+      }
+    };
+
+    fetchSession();
+  }, [pathname]);
+
+  // Hide navigation bar on login and register pages
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -306,31 +336,43 @@ export default function NavigationBar() {
 
         {/* User Profile Dropdown */}
         <div className="hidden md:flex md:items-center md:space-x-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-8 flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span>{user.name}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-56">
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.role}</p>
+          {user.isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-8 flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span>{user.name}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.role}</p>
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/api/auth/logout"
+                    className="w-full flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              asChild>
+              <Link href="/login">Login</Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile Navigation */}
@@ -512,9 +554,12 @@ export default function NavigationBar() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
-                    size="sm">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    size="sm"
+                    asChild>
+                    <Link href="/api/auth/logout">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </Link>
                   </Button>
                 </div>
               </div>

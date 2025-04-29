@@ -1,6 +1,16 @@
+import { getSession } from "@/lib/session";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home() {
+  // Check if user is logged in
+  const session = await getSession();
+
+  // If not logged in, redirect to login page
+  if (!session.isLoggedIn) {
+    redirect("/login");
+  }
+
   return (
     <main className="min-h-screen">
       <section className="min-h-screen bg-gradient-to-br from-white via-white to-white animate-gradient-x">
