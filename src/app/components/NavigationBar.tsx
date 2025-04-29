@@ -87,6 +87,41 @@ const LeaveRequestContent = () => {
   );
 };
 
+const ReportsContent = () => {
+  return (
+    <NavigationMenuContent className="grid gap-3 p-4 w-[400px] md:w-[500px] lg:w-[600px]">
+      <div className="grid gap-2">
+        <NavigationMenuLink asChild>
+          <Link
+            href="/reports-and-logs/leave-history-report"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Leave History Report</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View your leave history report.</p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
+            href="/reports-and-logs/monthly-leave-util-report"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Monthly Leave Utilization Reports</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+              View your monthly leave utilization reports.
+            </p>
+          </Link>
+        </NavigationMenuLink>
+        <NavigationMenuLink asChild>
+          <Link
+            href="/reports-and-logs/approval-logs"
+            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+            <div className="text-sm font-medium leading-none">Approval Logs</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">View your approval logs.</p>
+          </Link>
+        </NavigationMenuLink>
+      </div>
+    </NavigationMenuContent>
+  );
+};
+
 const EndorsementsContent = () => {
   return (
     <NavigationMenuContent className="grid gap-3 p-4 w-[400px] md:w-[500px] lg:w-[600px]">
@@ -189,7 +224,7 @@ export default function NavigationBar() {
             className="object-contain"
             priority
           />
-          <span className="text-lg">Leave Filing and Approval Process</span>
+          <span className="text-md">Leave Filing and Approval Process</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -241,6 +276,16 @@ export default function NavigationBar() {
                     Leave Balance Management
                   </Link>
                 </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <NavigationMenuTrigger
+                  className={cn(
+                    pathname.startsWith("/approvals") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  )}>
+                  Reports & Logs
+                </NavigationMenuTrigger>
+                <ReportsContent />
               </NavigationMenuItem>
 
               <NavigationMenuItem>
@@ -303,17 +348,162 @@ export default function NavigationBar() {
               side="right"
               className="w-80">
               <div className="flex flex-col space-y-4 mt-6">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-primary",
-                      pathname === link.href ? "text-primary" : "text-muted-foreground",
-                    )}>
-                    {link.label}
-                  </Link>
-                ))}
+                {/* Leave Request Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Leave Request</h3>
+                  <div className="pl-2 space-y-2 flex flex-col">
+                    <Link
+                      href="/leave-request/personal-information"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/leave-request/personal-information" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Personal Information
+                    </Link>
+                    <Link
+                      href="/leave-request/file-leave"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/leave-request/file-leave" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      File Leave
+                    </Link>
+                    <Link
+                      href="/leave-request/view-leave-balances"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/leave-request/view-leave-balances" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      View Leave Balances
+                    </Link>
+                    <Link
+                      href="/leave-request/track-status"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/leave-request/track-status" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Track Status
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Endorsements Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Endorsements</h3>
+                  <div className="pl-2 space-y-2 flex flex-col">
+                    <Link
+                      href="/endorse/team-calendar"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/endorse/team-calendar" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      View Team Calendar
+                    </Link>
+                    <Link
+                      href="/endorse/endorse-leave-request"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/endorse/endorse-leave-request" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Endorse Leave Request
+                    </Link>
+                    <Link
+                      href="/endorse/view-leave-balances"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/endorse/view-leave-balances" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      View Leave Balances
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Approvals Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Approvals</h3>
+                  <div className="pl-2 space-y-2 flex flex-col">
+                    <Link
+                      href="/approvals/pending-approvals"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/approvals/pending-approvals" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Pending Approvals
+                    </Link>
+                    <Link
+                      href="/approvals/approved-approvals"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/approvals/approved-approvals" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Approved Approvals
+                    </Link>
+                    <Link
+                      href="/approvals/rejected-approvals"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/approvals/rejected-approvals" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Rejected Approvals
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Leave Balance Management */}
+                <Link
+                  href="/leave-balance-management"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
+                  )}>
+                  Leave Balance Management
+                </Link>
+
+                {/* Reports & Logs Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Reports & Logs</h3>
+                  <div className="pl-2 space-y-2 flex flex-col">
+                    <Link
+                      href="/reports-and-logs/leave-history-report"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/leave-history-report"
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}>
+                      Leave History Report
+                    </Link>
+                    <Link
+                      href="/reports-and-logs/monthly-leave-util-report"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/monthly-leave-util-report"
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}>
+                      Monthly Leave Utilization
+                    </Link>
+                    <Link
+                      href="/reports-and-logs/approval-logs"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Approval Logs
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Audit Trail */}
+                <Link
+                  href="/audit-trail"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
+                  )}>
+                  Audit Trail
+                </Link>
+
                 <div className="border-t pt-4 mt-4">
                   <div className="flex flex-col space-y-1 mb-4">
                     <p className="text-sm font-medium">{user.name}</p>
