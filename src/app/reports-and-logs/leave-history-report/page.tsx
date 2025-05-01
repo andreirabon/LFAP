@@ -119,8 +119,8 @@ export default function LeaveHistoryReportPage() {
       {/* Filter Section */}
       <div className="mb-6">
         <Select
-          value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value)}>
+          defaultValue={statusFilter}
+          onValueChange={(value: string) => setStatusFilter(value)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
