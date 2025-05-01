@@ -1,144 +1,10 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-
-// Dynamically import all react-pdf components
-const Document = dynamic(() => import("@react-pdf/renderer").then((mod) => mod.Document), { ssr: false });
-const Page = dynamic(() => import("@react-pdf/renderer").then((mod) => mod.Page), { ssr: false });
-const Text = dynamic(() => import("@react-pdf/renderer").then((mod) => mod.Text), { ssr: false });
-const View = dynamic(() => import("@react-pdf/renderer").then((mod) => mod.View), { ssr: false });
-const PDFDownloadLink = dynamic(() => import("@react-pdf/renderer").then((mod) => mod.PDFDownloadLink), {
-  ssr: false,
-  loading: () => (
-    <Button
-      variant="outline"
-      disabled>
-      <Download className="mr-2 h-4 w-4" />
-      Loading PDF Generator...
-    </Button>
-  ),
-});
-
-// Import StyleSheet type only for type checking
-// Create styles object with proper type
-const styles = {
-  page: {
-    flexDirection: "column" as const,
-    backgroundColor: "#ffffff",
-    padding: 30,
-    fontFamily: "Helvetica",
-  },
-  title: {
-    fontSize: 20,
-    marginBottom: 20,
-    fontWeight: "bold",
-  },
-  table: {
-    width: "100%",
-    borderStyle: "solid" as const,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    marginTop: 10,
-  },
-  tableRow: {
-    flexDirection: "row" as const,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    minHeight: 35,
-    alignItems: "center" as const,
-  },
-  tableHeader: {
-    backgroundColor: "#f9fafb",
-  },
-  tableCell: {
-    flex: 1,
-    fontSize: 10,
-    padding: 5,
-    textAlign: "left" as const,
-    fontFamily: "Helvetica",
-  },
-  statusBadge: {
-    padding: 4,
-    borderRadius: 4,
-    fontSize: 10,
-    textAlign: "center" as const,
-  },
-  statusApproved: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-  },
-  statusRejected: {
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
-  },
-  statusPending: {
-    backgroundColor: "#f3f4f6",
-    color: "#374151",
-  },
-} as const;
-
-// Format date to local string
-const formatDate = (dateString: string) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString();
-};
-
-// Update the ApprovalLogsPDF component to use the dynamic components
-const ApprovalLogsPDF = ({ data }: { data: ApprovalLog[] }) => (
-  <Document>
-    <Page
-      size="A4"
-      style={styles.page}>
-      <Text style={styles.title}>Approval Logs Report</Text>
-      <View style={styles.table}>
-        {/* Table Header */}
-        <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={styles.tableCell}>Request ID</Text>
-          <Text style={styles.tableCell}>Type</Text>
-          <Text style={styles.tableCell}>Requester</Text>
-          <Text style={styles.tableCell}>Request Date</Text>
-          <Text style={styles.tableCell}>Approver</Text>
-          <Text style={styles.tableCell}>Approval Date</Text>
-          <Text style={styles.tableCell}>Status</Text>
-          <Text style={styles.tableCell}>Comments</Text>
-        </View>
-        {/* Table Body */}
-        {data.map((log) => (
-          <View
-            key={log.id}
-            style={styles.tableRow}>
-            <Text style={styles.tableCell}>{log.id}</Text>
-            <Text style={styles.tableCell}>{log.requestType}</Text>
-            <Text style={styles.tableCell}>{log.requesterName}</Text>
-            <Text style={styles.tableCell}>{formatDate(log.requestDate)}</Text>
-            <Text style={styles.tableCell}>{log.approverName}</Text>
-            <Text style={styles.tableCell}>{formatDate(log.approvalDate)}</Text>
-            <Text
-              style={[
-                styles.tableCell,
-                styles.statusBadge,
-                log.status === "Approved"
-                  ? styles.statusApproved
-                  : log.status === "Rejected"
-                  ? styles.statusRejected
-                  : styles.statusPending,
-              ]}>
-              {log.status}
-            </Text>
-            <Text style={styles.tableCell}>{log.comments || "—"}</Text>
-          </View>
-        ))}
-      </View>
-    </Page>
-  </Document>
-);
 
 // Types
 interface ApprovalLog {
@@ -151,6 +17,12 @@ interface ApprovalLog {
   status: "Approved" | "Rejected" | "Pending";
   comments?: string;
 }
+
+// Format date to local string
+const formatDate = (dateString: string) => {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleDateString();
+};
 
 // Sample data
 const sampleApprovalLogs: ApprovalLog[] = [
@@ -201,25 +73,6 @@ type SortConfig = {
   direction: "asc" | "desc";
 } | null;
 
-// Create a separate component for the PDF download button
-const PDFDownloadButton = ({ data }: { data: ApprovalLog[] }) => {
-  return (
-    <PDFDownloadLink
-      document={<ApprovalLogsPDF data={data} />}
-      fileName="approval-logs.pdf"
-      style={{ textDecoration: "none" }}>
-      {({ loading }) => (
-        <Button
-          variant="outline"
-          disabled={loading}>
-          <Download className="mr-2 h-4 w-4" />
-          {loading ? "Generating PDF..." : "Download PDF"}
-        </Button>
-      )}
-    </PDFDownloadLink>
-  );
-};
-
 export default function ApprovalLogsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
@@ -249,15 +102,17 @@ export default function ApprovalLogsPage() {
     // Apply sorting
     if (sortConfig) {
       filtered.sort((a, b) => {
-        if (sortConfig.key === "approvalDate" && (!a[sortConfig.key] || !b[sortConfig.key])) {
-          return sortConfig.direction === "asc" ? 1 : -1; // Empty dates go last
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue !== undefined && bValue !== undefined) {
+          if (aValue < bValue) {
+            return sortConfig.direction === "asc" ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === "asc" ? 1 : -1;
+          }
         }
-
-        const aValue = String(a[sortConfig.key]);
-        const bValue = String(b[sortConfig.key]);
-
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -270,7 +125,6 @@ export default function ApprovalLogsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Approval Logs</CardTitle>
-          <PDFDownloadButton data={filteredAndSortedData} />
         </CardHeader>
         <CardContent>
           {/* Filter Controls */}

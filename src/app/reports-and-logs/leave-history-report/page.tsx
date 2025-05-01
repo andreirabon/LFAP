@@ -4,14 +4,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { DateTime } from "luxon";
-import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import type { LeaveRequest } from "./PDFDownload";
 
-// Dynamically import PDF components with ssr disabled
-const PDFDownloadComponent = dynamic(() => import("./PDFDownload").then((mod) => mod.PDFDownloadComponent), {
-  ssr: false,
-});
+// Types
+interface LeaveRequest {
+  id: number;
+  employeeName: string;
+  leaveType: string;
+  requestDate: string;
+  startDate: string;
+  endDate: string;
+  status: "Approved" | "Pending" | "Rejected";
+}
 
 // Mock Data
 const mockLeaveRequests: LeaveRequest[] = [
@@ -113,7 +117,6 @@ export default function LeaveHistoryReportPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Leave History Report</h1>
-        <PDFDownloadComponent data={filteredAndSortedData} />
       </div>
 
       {/* Filter Section */}

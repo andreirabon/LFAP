@@ -65,7 +65,6 @@ A comprehensive web application for managing leave requests within the Departmen
 
 - TypeScript for type safety
 - Sonner for toast notifications
-- PDF generation with @react-pdf/renderer
 - TRPC for API communication
 
 ## Getting Started

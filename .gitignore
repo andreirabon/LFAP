@@ -120,10 +120,6 @@ src/db/*
 **/public/fallback-*.js
 **/public/precache-manifest.*.js
 
-# PDF generation
-*.pdf
-pdf-output/
-
 # Backup files
 *.bak
 *.backup

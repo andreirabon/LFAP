@@ -3,7 +3,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import dynamic from "next/dynamic";
 import { useState } from "react";
 
 interface DepartmentData {
@@ -122,12 +121,6 @@ const departmentColors: Record<string, { bg: string; text: string; hover: string
   },
 };
 
-// Dynamically import PDF components with no SSR
-const PDFDownloadButton = dynamic(() => import("./PDFDownloadButton"), {
-  ssr: false,
-  loading: () => <div>Loading PDF Generator...</div>,
-});
-
 export default function MonthlyLeaveUtilReportPage() {
   const [selectedMonth, setSelectedMonth] = useState(mockData.months[0]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
@@ -159,14 +152,6 @@ export default function MonthlyLeaveUtilReportPage() {
               ))}
             </SelectContent>
           </Select>
-          <PDFDownloadButton
-            selectedMonth={selectedMonth}
-            departmentData={currentMonthData}
-            employeeData={mockData.employeeData[selectedMonth]}
-            totalLeaveDays={totalLeaveDays}
-            averageUtilization={averageUtilization}
-            totalEmployees={totalEmployees}
-          />
         </div>
       </div>
 
