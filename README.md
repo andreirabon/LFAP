@@ -59,7 +59,6 @@ A comprehensive web application for managing leave requests within the Departmen
 - Next.js API Routes
 - iron-session for authentication
 - Drizzle ORM for database operations
-- PostgreSQL (via Neon Serverless)
 
 ### Tools and Utilities
 
