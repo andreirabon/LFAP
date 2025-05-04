@@ -15,6 +15,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("");
+  const [sex, setSex] = useState("");
 
   useEffect(() => {
     if (state) {
@@ -109,6 +110,27 @@ export default function Register() {
                   <SelectItem value="HR Admin">HR Admin</SelectItem>
                   <SelectItem value="Top Management">Top Management</SelectItem>
                   <SelectItem value="Super Admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="sex"
+                className="flex items-center gap-2">
+                <User className="h-4 w-4 text-gray-500" />
+                Sex
+              </Label>
+              <Select
+                name="sex"
+                value={sex}
+                onValueChange={setSex}
+                required>
+                <SelectTrigger className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <SelectValue placeholder="Select sex" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -27,49 +27,19 @@ interface LeaveBalance {
   color: string;
 }
 
-// Sample leave balances (replace with actual API data)
-const leaveBalances: LeaveBalance[] = [
-  {
-    type: "Vacation Leave",
-    total: 15,
-    used: 5,
-    remaining: 10,
-    color: "text-blue-600",
-  },
-  {
-    type: "Mandatory/Force Leave",
-    total: 5,
-    used: 2,
-    remaining: 3,
-    color: "text-purple-600",
-  },
-  {
-    type: "Sick Leave",
-    total: 15,
-    used: 3,
-    remaining: 12,
-    color: "text-red-600",
-  },
-  {
-    type: "Special Privilege Leave",
-    total: 3,
-    used: 1,
-    remaining: 2,
-    color: "text-green-600",
-  },
-];
-
 // Form schema
 const formSchema = z
   .object({
     leaveType: z.string({
       required_error: "Please select a leave type",
     }),
-    startDate: z.date({
-      required_error: "Start date is required",
-    }),
-    endDate: z.date({
-      required_error: "End date is required",
+    dateRange: z.object({
+      from: z.date({
+        required_error: "Start date is required",
+      }),
+      to: z.date({
+        required_error: "End date is required",
+      }),
     }),
     reason: z
       .string()
@@ -82,19 +52,43 @@ const formSchema = z
   })
   .refine(
     (data) => {
-      const start = DateTime.fromJSDate(data.startDate);
-      const end = DateTime.fromJSDate(data.endDate);
+      const start = DateTime.fromJSDate(data.dateRange.from);
+      const end = DateTime.fromJSDate(data.dateRange.to);
       return end >= start;
     },
     {
       message: "End date must be after start date",
-      path: ["endDate"],
+      path: ["dateRange"],
     },
   );
 
 export default function FileLeave() {
+  // Replace hardcoded leave balances with state
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  // Add useEffect to fetch leave balances
+  useEffect(() => {
+    const fetchLeaveBalances = async () => {
+      try {
+        const response = await fetch("/api/leave-requests/leave-balances");
+        if (!response.ok) {
+          throw new Error("Failed to fetch leave balances");
+        }
+        const data = await response.json();
+        setLeaveBalances(data.leaveBalances);
+      } catch (error) {
+        console.error("Error fetching leave balances:", error);
+        toast.error("Failed to load leave balances");
+      } finally {
+        setIsLoadingBalances(false);
+      }
+    };
+
+    fetchLeaveBalances();
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -127,15 +121,54 @@ export default function FileLeave() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      console.log(values);
+      // Handle file uploads first if any files are present
+      let uploadedFileUrls: string[] = [];
+      if (values.supportingDocs?.length) {
+        const formData = new FormData();
+        values.supportingDocs.forEach((file) => {
+          formData.append("files", file);
+        });
+
+        const uploadResponse = await fetch("/api/supporting-documents", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload supporting documents");
+        }
+
+        const uploadResult = await uploadResponse.json();
+        uploadedFileUrls = uploadResult.fileUrls;
+      }
+
+      // Submit the leave request with file URLs
+      const response = await fetch("/api/leave-requests/file-leave", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          leaveType: values.leaveType,
+          startDate: values.dateRange.from.toISOString(),
+          endDate: values.dateRange.to.toISOString(),
+          reason: values.reason,
+          supportingDocs: uploadedFileUrls,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit leave request");
+      }
+
       toast.success("Leave request submitted successfully");
       form.reset();
+      router.push("/leave-request/track-status");
     } catch (error: unknown) {
       console.error("Leave request submission failed:", error);
-      toast.error("Failed to submit leave request");
+      toast.error(error instanceof Error ? error.message : "Failed to submit leave request");
     } finally {
       setIsSubmitting(false);
     }
@@ -169,24 +202,36 @@ export default function FileLeave() {
                     <FormLabel>Leave Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}>
+                      defaultValue={field.value}
+                      disabled={isLoadingBalances}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select leave type" />
+                          <SelectValue
+                            placeholder={isLoadingBalances ? "Loading leave balances..." : "Select leave type"}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {leaveBalances.map((leave) => (
+                        {isLoadingBalances ? (
                           <SelectItem
-                            key={leave.type}
-                            value={leave.type}
-                            disabled={leave.remaining === 0}>
-                            <span className={cn("font-medium", leave.color)}>
-                              {leave.type}{" "}
-                              <span className="text-muted-foreground">({leave.remaining} days remaining)</span>
-                            </span>
+                            value="loading"
+                            disabled>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                            Loading...
                           </SelectItem>
-                        ))}
+                        ) : (
+                          leaveBalances.map((leave) => (
+                            <SelectItem
+                              key={leave.type}
+                              value={leave.type}
+                              disabled={leave.remaining === 0}>
+                              <span className={cn("font-medium", leave.color)}>
+                                {leave.type}{" "}
+                                <span className="text-muted-foreground">({leave.remaining} days remaining)</span>
+                              </span>
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -195,88 +240,54 @@ export default function FileLeave() {
               />
 
               {/* Date Selection */}
-              <div className="grid gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}>
-                              {field.value ? (
-                                DateTime.fromJSDate(field.value).toLocaleString(DateTime.DATE_FULL)
+              <FormField
+                control={form.control}
+                name="dateRange"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Leave Duration</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}>
+                            {field.value?.from ? (
+                              field.value.to ? (
+                                <>
+                                  {DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)} -{" "}
+                                  {DateTime.fromJSDate(field.value.to).toLocaleString(DateTime.DATE_FULL)}
+                                </>
                               ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-auto p-0"
-                          align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={isDateDisabled}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>End Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}>
-                              {field.value ? (
-                                DateTime.fromJSDate(field.value).toLocaleString(DateTime.DATE_FULL)
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-auto p-0"
-                          align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={isDateDisabled}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                                DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)
+                              )
+                            ) : (
+                              <span>Pick a date range</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto p-0"
+                        align="start">
+                        <Calendar
+                          mode="range"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={isDateDisabled}
+                          numberOfMonths={2}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Reason */}
               <FormField

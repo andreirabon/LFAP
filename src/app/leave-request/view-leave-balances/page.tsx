@@ -1,68 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getUserLeaveBalances } from "@/lib/leave-balances";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
-
-interface LeaveBalance {
-  type: string;
-  total: number;
-  used: number;
-  remaining: number;
-  description: string;
-  color: string;
-}
-
-const leaveBalances: LeaveBalance[] = [
-  {
-    type: "Vacation Leave",
-    total: 15,
-    used: 5,
-    remaining: 10,
-    description: "Annual vacation leave for rest and recreation",
-    color: "text-blue-600",
-  },
-  {
-    type: "Mandatory/Force Leave",
-    total: 5,
-    used: 2,
-    remaining: 3,
-    description: "Required leave days that must be taken within the year",
-    color: "text-purple-600",
-  },
-  {
-    type: "Sick Leave",
-    total: 15,
-    used: 3,
-    remaining: 12,
-    description: "Leave for medical reasons and recovery",
-    color: "text-red-600",
-  },
-  {
-    type: "Maternity Leave",
-    total: 105,
-    used: 0,
-    remaining: 105,
-    description: "Leave for childbirth and maternal care",
-    color: "text-pink-600",
-  },
-  {
-    type: "Special Privilege Leave",
-    total: 3,
-    used: 1,
-    remaining: 2,
-    description: "Leave for special occasions or personal matters",
-    color: "text-green-600",
-  },
-];
 
 export default async function ViewLeaveBalances() {
   // Check if user is logged in
   const session = await getSession();
 
-  if (!session.isLoggedIn) {
+  if (!session.isLoggedIn || !session.userId) {
     redirect("/login");
   }
+
+  // Fetch leave balances for the logged-in user
+  const leaveBalances = await getUserLeaveBalances(session.userId);
 
   return (
     <div className="container mx-auto py-8 px-4">
