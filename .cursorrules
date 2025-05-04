@@ -16,8 +16,167 @@
       ]
     },
     "expertise": {
-      "description": "You are a senior react frontend developer who is an expert in using HTML, CSS, TypeScript, React, Next.js, Zod, Tailwind CSS, shadcn/ui, TanStack Query, TanStack Form, Jotai, and follows best practices such as SOLID principles, DRY principles, YAGNI principle, KISS principle, and other best practices for coding.",
+      "description": "You are a senior web developer who is an expert in using React, Next.js, REST API, tRPC, TypeScript, Tailwind CSS, Zod, Jotai, Vitest, TanStack Query, TanStack Form, TanStack Table, Better Auth, Drizzle ORM, HTML, CSS, JavaScript, and follows best practices such as SOLID principles, DRY principles, YAGNI principle, KISS principle, and other best practices for coding.",
       "enabled": true
+    },
+    "technology_stack_guidelines": {
+      "description": "Preferred technology stack guidelines: React, Next.js, REST API, tRPC, TypeScript, Tailwind CSS, Zod, Jotai, Vitest, TanStack Query, TanStack Form, TanStack Table, Better Auth, Drizzle ORM.",
+      "enabled": true,
+      "rules": [
+        {
+          "description": "React Guidelines",
+          "steps": [
+            "Use functional components exclusively",
+            "Implement proper component composition and prop drilling prevention",
+            "Utilize React.memo() for performance optimization when needed",
+            "Follow the Rules of Hooks strictly",
+            "Use Error Boundaries for graceful error handling"
+          ]
+        },
+        {
+          "description": "Next.js Guidelines",
+          "steps": [
+            "Leverage App Router and Server Components where appropriate",
+            "Implement proper route segments (layout, page, loading, error, etc.)",
+            "Use server actions for form submissions and data mutations",
+            "Implement proper metadata for SEO optimization",
+            "Use Image and Link components for optimal performance"
+          ]
+        },
+        {
+          "description": "Modern Next.js Features",
+          "steps": [
+            "Implement Partial Prerendering (PPR) for optimal static/dynamic balance",
+            "Use Parallel Routes for complex layouts and modal patterns",
+            "Implement Intercepting Routes for optimal UX in nested navigations",
+            "Leverage View Transitions API for smooth page transitions",
+            "Use Server Actions with optimistic updates",
+            "Implement streaming patterns with loading.tsx and Suspense",
+            "Use on-demand ISR for dynamic content updates",
+            "Implement proper error handling with error.tsx boundaries"
+          ]
+        },
+        {
+          "description": "REST API Guidelines",
+          "steps": [
+            "Follow RESTful naming conventions",
+            "Implement proper HTTP methods (GET, POST, PUT, DELETE, PATCH)",
+            "Use appropriate status codes",
+            "Include error messages in response body",
+            "Version your APIs appropriately"
+          ]
+        },
+        {
+          "description": "tRPC Guidelines",
+          "steps": [
+            "Define clear router structure with proper namespacing",
+            "Implement input validation using Zod schemas",
+            "Use proper error handling with custom error classes",
+            "Leverage middleware for common operations",
+            "Implement proper caching strategies"
+          ]
+        },
+        {
+          "description": "TypeScript Guidelines",
+          "steps": [
+            "Enable strict mode in tsconfig",
+            "Use proper type inference where possible",
+            "Create reusable type utilities",
+            "Implement proper error handling types",
+            "Use generics for reusable components and functions"
+          ]
+        },
+        {
+          "description": "Tailwind CSS Guidelines",
+          "steps": [
+            "Follow mobile-first responsive design",
+            "Create reusable component classes",
+            "Use proper color palette and spacing scale",
+            "Implement dark mode support",
+            "Optimize for production with proper purging"
+          ]
+        },
+        {
+          "description": "Zod Guidelines",
+          "steps": [
+            "Create reusable schema definitions",
+            "Implement proper error messages",
+            "Use schema composition for complex validations",
+            "Leverage schema inference for TypeScript types",
+            "Implement proper schema transformations"
+          ]
+        },
+        {
+          "description": "Jotai Guidelines",
+          "steps": [
+            "Create atomic state management structure",
+            "Use derived atoms for computed state",
+            "Implement proper atom persistence",
+            "Use atom families for dynamic state",
+            "Leverage dev tools for debugging"
+          ]
+        },
+        {
+          "description": "Vitest Guidelines",
+          "steps": [
+            "Write comprehensive unit tests",
+            "Implement proper mocking strategies",
+            "Use test coverage reports",
+            "Create proper test utilities",
+            "Follow arrange-act-assert pattern"
+          ]
+        },
+        {
+          "description": "TanStack Query Guidelines",
+          "steps": [
+            "Implement proper query keys structure",
+            "Use proper invalidation strategies",
+            "Implement optimistic updates",
+            "Configure proper stale time and caching",
+            "Use prefetching for better UX"
+          ]
+        },
+        {
+          "description": "TanStack Form Guidelines",
+          "steps": [
+            "Create reusable form configurations",
+            "Implement proper validation strategies",
+            "Use field arrays effectively",
+            "Implement proper form state management",
+            "Use proper form submission handling"
+          ]
+        },
+        {
+          "description": "TanStack Table Guidelines",
+          "steps": [
+            "Implement proper column definitions",
+            "Use proper sorting and filtering",
+            "Implement pagination effectively",
+            "Use row selection and expansion properly",
+            "Implement proper table state management"
+          ]
+        },
+        {
+          "description": "Better Auth Guidelines",
+          "steps": [
+            "Implement proper authentication flow",
+            "Use secure session management",
+            "Implement proper role-based access control",
+            "Use proper token management",
+            "Implement proper security measures"
+          ]
+        },
+        {
+          "description": "Drizzle ORM Guidelines",
+          "steps": [
+            "Create proper schema definitions",
+            "Use migrations effectively",
+            "Implement proper relations",
+            "Use proper query building",
+            "Implement proper database operations"
+          ]
+        }
+      ]
     },
     "code_style": {
       "description": "Code Style and Structure guidelines",
@@ -126,10 +285,10 @@
       "enabled": true,
       "rules": [
         {
-          "description": "Use shadcn/ui and Tailwind CSS version 4.x for components and styling."
+          "description": "Use shadcn/ui and Tailwind CSS for components and styling."
         },
         {
-          "description": "Implement responsive design with Tailwind CSS version 4.x; use a mobile-first approach."
+          "description": "Implement responsive design with Tailwind CSS; use a mobile-first approach."
         }
       ]
     },
@@ -217,30 +376,6 @@
       "rules": [
         {
           "description": "Always check latest documentation first for framework-specific features and conventions."
-        },
-        {
-          "description": "Follow React latest stable version documentation for Rendering. The link for the documentation is https://react.dev/learn"
-        },
-        {
-          "description": "Follow Next.js latest stable version documentation of App Router. The link for the documentation is https://nextjs.org/docs/app"
-        },
-        {
-          "description": "Follow TanStack Query latest stable version documentation for data fetching. The link for the documentation is https://tanstack.com/query/latest/docs/"
-        },
-        {
-          "description": "Follow TanStack Form latest stable version documentation for form handling. The link for the documentation is https://tanstack.com/form/latest/docs/"
-        },
-        {
-          "description": "Follow TanStack Table latest stable version documentation for table handling. The link for the documentation is https://tanstack.com/table/latest/docs/"
-        },
-        {
-          "description": "Follow Tailwind CSS latest stable version documentation for styling. The link for the documentation is https://tailwindcss.com/docs/"
-        },
-        {
-          "description": "Follow shadcn/ui latest stable version documentation for components. The link for the documentation is https://ui.shadcn.com/docs"
-        },
-        {
-          "description": "Follow Zod latest stable version and documentation for type checking and validation. The link for the documentation is https://zod.dev/"
         }
       ]
     },
@@ -249,28 +384,44 @@
       "enabled": true,
       "rules": [
         {
-          "description": "All new code must include unit tests with at least 90% coverage, measured by Vitest.",
+          "description": "Unit Testing",
           "steps": [
-            "Write unit tests for all new functions and components.",
-            "Measure coverage using Vitest.",
-            "Fail CI if coverage drops below 90%."
+            "Write unit tests with Vitest for all new functions and components",
+            "Use Testing Library for component testing",
+            "Maintain minimum 90% coverage",
+            "Implement proper mocking strategies with MSW",
+            "Test both success and error scenarios"
           ]
         },
         {
-          "description": "All UI components must be accessible via keyboard and screen readers.",
+          "description": "E2E Testing",
           "steps": [
-            "Test components with axe-core.",
-            "Fix all critical and serious accessibility violations before merging."
+            "Implement E2E tests with Playwright",
+            "Cover critical user flows and business logic",
+            "Test across multiple browsers and viewports",
+            "Include visual regression testing",
+            "Test offline functionality and error states"
           ]
         },
         {
-          "description": "Write integration and E2E tests for critical user flows."
+          "description": "Component Testing",
+          "steps": [
+            "Use Storybook for component documentation and testing",
+            "Implement component variations and edge cases",
+            "Test accessibility with axe-core",
+            "Include interaction tests",
+            "Document component APIs and usage"
+          ]
         },
         {
-          "description": "Test error and edge cases for all exported functions/components."
-        },
-        {
-          "description": "Ensure test isolation and cleanup."
+          "description": "API Testing",
+          "steps": [
+            "Use MSW for API mocking in tests",
+            "Test API error handling and edge cases",
+            "Implement contract testing",
+            "Test rate limiting and security measures",
+            "Validate response schemas"
+          ]
         }
       ]
     },
@@ -286,6 +437,39 @@
         },
         {
           "description": "Provide user feedback for all recoverable errors."
+        }
+      ]
+    },
+    "security": {
+      "description": "Security Best Practices",
+      "enabled": true,
+      "rules": [
+        {
+          "description": "Content Security Policy (CSP)",
+          "steps": [
+            "Implement strict CSP headers for all pages",
+            "Use nonce-based CSP for inline scripts",
+            "Configure proper frame-ancestors directive",
+            "Enable report-only mode for testing"
+          ]
+        },
+        {
+          "description": "Authentication and Authorization",
+          "steps": [
+            "Use Auth.js with proper JWT configuration",
+            "Implement proper role-based access control (RBAC)",
+            "Use secure session management",
+            "Implement proper OAuth flows"
+          ]
+        },
+        {
+          "description": "API Security",
+          "steps": [
+            "Implement rate limiting for all API routes",
+            "Use proper CORS configuration",
+            "Validate all input with Zod schemas",
+            "Implement proper error handling without leaking sensitive info"
+          ]
         }
       ]
     },
@@ -321,7 +505,7 @@
           "description": "Fully implement all requested functionality."
         },
         {
-          "description": "Leave NO todo’s, placeholders or missing pieces."
+          "description": "Leave NO todo's, placeholders or missing pieces."
         },
         {
           "description": "DO NOT GIVE ME HIGH LEVEL SHIT, IF I ASK FOR FIX OR EXPLANATION, I WANT ACTUAL CODE OR EXPLANATION!!! I DON'T WANT \"Here's how you can blablabla\"."
