@@ -1,23 +1,40 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Employee, searchEmployees } from "./actions";
+import { Employee, LeaveTypeKey, searchEmployees } from "./actions";
+import { LeaveBalanceCardClient } from "./leave-balance-card";
 import { SearchForm } from "./search-form";
+
+// Define leave type configurations
+const leaveTypeDefinitions: Array<{ key: LeaveTypeKey; label: string }> = [
+  { key: "vacationLeave", label: "Vacation Leave" },
+  { key: "mandatoryLeave", label: "Mandatory Leave" },
+  { key: "sickLeave", label: "Sick Leave" },
+  { key: "maternityLeave", label: "Maternity Leave" },
+  { key: "paternityLeave", label: "Paternity Leave" },
+  { key: "specialPrivilegeLeave", label: "Special Privilege Leave" },
+];
 
 export default async function EmployeeLeaveManagement({
   searchParams,
 }: {
   searchParams: { employeeId?: string; firstName?: string; lastName?: string };
 }) {
-  await Promise.resolve(); // Ensure async context is established
-
   let employees: Employee[] = [];
   let error: string | null = null;
   let hasSearched = false;
 
-  // Convert searchParams to a regular object after the initial await
+  // Ensure async context is established immediately before accessing searchParams
+  await Promise.resolve();
+
+  // Access searchParams properties first
+  const rawEmployeeId = searchParams.employeeId;
+  const rawFirstName = searchParams.firstName;
+  const rawLastName = searchParams.lastName;
+
+  // Then, create the params object with fallbacks
   const params = {
-    employeeId: searchParams.employeeId || "",
-    firstName: searchParams.firstName || "",
-    lastName: searchParams.lastName || "",
+    employeeId: rawEmployeeId || "",
+    firstName: rawFirstName || "",
+    lastName: rawLastName || "",
   };
 
   // Use individual checks with the resolved params
@@ -84,30 +101,24 @@ export default async function EmployeeLeaveManagement({
                   <CardContent>
                     <h3 className="text-lg font-semibold mb-4">Leave Balances</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      <LeaveBalanceCard
-                        label="Vacation Leave"
-                        value={employee.vacationLeave}
-                      />
-                      <LeaveBalanceCard
-                        label="Mandatory Leave"
-                        value={employee.mandatoryLeave}
-                      />
-                      <LeaveBalanceCard
-                        label="Sick Leave"
-                        value={employee.sickLeave}
-                      />
-                      <LeaveBalanceCard
-                        label="Maternity Leave"
-                        value={employee.maternityLeave}
-                      />
-                      <LeaveBalanceCard
-                        label="Paternity Leave"
-                        value={employee.paternityLeave}
-                      />
-                      <LeaveBalanceCard
-                        label="Special Privilege Leave"
-                        value={employee.specialPrivilegeLeave}
-                      />
+                      {leaveTypeDefinitions.map((leaveDef) => {
+                        const leaveValue = employee[leaveDef.key];
+                        if (typeof leaveValue !== "number") {
+                          console.warn(
+                            `Employee ID ${employee.id} missing or invalid value for leave type ${leaveDef.key}`,
+                          );
+                          return null;
+                        }
+                        return (
+                          <LeaveBalanceCardClient
+                            key={leaveDef.key}
+                            employeeId={employee.id}
+                            leaveTypeKey={leaveDef.key}
+                            label={leaveDef.label}
+                            initialValue={leaveValue}
+                          />
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -120,15 +131,6 @@ export default async function EmployeeLeaveManagement({
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function LeaveBalanceCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="text-sm text-gray-500 mb-1">{label}</div>
-      <div className="text-2xl font-semibold">{value} days</div>
     </div>
   );
 }
