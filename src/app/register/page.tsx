@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import Image from "next/image";
 import { useActionState, useEffect, useState } from "react";
 import { registerUser } from "./actions";
 
@@ -32,8 +33,16 @@ export default function Register() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <Card className="w-full max-w-md shadow-xl rounded-lg border">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription className="text-gray-600">Enter employee information to get started</CardDescription>
+          <Image
+            src="/dost_login.png"
+            alt="DOST Logo"
+            width={200}
+            height={20}
+            className="mx-auto h-auto w-auto"
+          />
+          <CardDescription className="text-[#01AFF6] text-xl">
+            Create Account for Leave Filing and Approval System
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -163,10 +172,13 @@ export default function Register() {
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-[#01AFF6] hover:bg-[#01AFF6]"
               disabled={isLoading}>
               {isLoading ? "Registering..." : "Register"}
             </Button>
+            <div className="text-center text-sm text-muted-foreground mt-4">
+              Having trouble registering? Contact the IT Department
+            </div>
           </form>
         </CardContent>
       </Card>

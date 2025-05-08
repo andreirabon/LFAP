@@ -290,21 +290,34 @@ export default function NavigationBar() {
               )}
 
               {(user.role === "HR Admin" || user.role === "Super Admin") && (
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild>
-                    <Link
-                      href="/leave-balance-management"
+                <>
+                  <NavigationMenuItem>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        href="/leave-balance-management"
+                        className={cn(
+                          navigationMenuTriggerStyle(),
+                          "text-xs lg:text-sm px-2",
+                          pathname === "/leave-balance-management"
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground",
+                        )}>
+                        Leave Balance
+                      </Link>
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger
                       className={cn(
-                        navigationMenuTriggerStyle(),
                         "text-xs lg:text-sm px-2",
-                        pathname === "/leave-balance-management"
-                          ? "bg-accent text-accent-foreground"
-                          : "text-muted-foreground",
+                        pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
                       )}>
-                      Leave Balance
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
+                      Reports
+                    </NavigationMenuTrigger>
+                    <ReportsContent />
+                  </NavigationMenuItem>
+                </>
               )}
 
               {(user.role === "Top Management" || user.role === "Super Admin") && (
@@ -516,14 +529,50 @@ export default function NavigationBar() {
                 )}
 
                 {(user.role === "HR Admin" || user.role === "Super Admin") && (
-                  <Link
-                    href="/leave-balance-management"
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-primary",
-                      pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
-                    )}>
-                    Leave Balance Management
-                  </Link>
+                  <>
+                    <Link
+                      href="/leave-balance-management"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-primary",
+                        pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Leave Balance Management
+                    </Link>
+
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Reports & Logs</h3>
+                      <div className="pl-2 space-y-2 flex flex-col">
+                        <Link
+                          href="/reports-and-logs/leave-history-report"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/leave-history-report"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          Leave History Report
+                        </Link>
+                        <Link
+                          href="/reports-and-logs/monthly-leave-util-report"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/monthly-leave-util-report"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          Monthly Leave Utilization
+                        </Link>
+                        <Link
+                          href="/reports-and-logs/approval-logs"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Approval Logs
+                        </Link>
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {(user.role === "Top Management" || user.role === "Super Admin") && (

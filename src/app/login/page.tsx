@@ -36,7 +36,9 @@ export default function Login() {
             height={20}
             className="mx-auto h-auto w-auto"
           />
-          <CardDescription className="text-[#01AFF6] text-xl">Leave Filing and Approval System</CardDescription>
+          <CardDescription className="text-[#01AFF6] text-xl">
+            Login to Leave Filing and Approval System
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
