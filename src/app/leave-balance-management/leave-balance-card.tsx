@@ -12,9 +12,16 @@ interface LeaveBalanceCardClientProps {
   leaveTypeKey: LeaveTypeKey;
   label: string;
   initialValue: number;
+  color?: string;
 }
 
-export function LeaveBalanceCardClient({ employeeId, leaveTypeKey, label, initialValue }: LeaveBalanceCardClientProps) {
+export function LeaveBalanceCardClient({
+  employeeId,
+  leaveTypeKey,
+  label,
+  initialValue,
+  color,
+}: LeaveBalanceCardClientProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(initialValue);
@@ -80,9 +87,9 @@ export function LeaveBalanceCardClient({ employeeId, leaveTypeKey, label, initia
   return (
     <div className="bg-card border rounded-lg p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
       <div>
-        <div className="text-sm text-muted-foreground mb-1">{label}</div>
+        <div className={`text-sm mb-1 ${color ? color : "text-muted-foreground"}`}>{label}</div>
         {!isEditing ? (
-          <div className="text-2xl font-semibold text-card-foreground">
+          <div className={`text-2xl font-semibold ${color || "text-card-foreground"}`}>
             {initialValue} day{initialValue === 1 ? "" : "s"}
           </div>
         ) : (
@@ -94,7 +101,7 @@ export function LeaveBalanceCardClient({ employeeId, leaveTypeKey, label, initia
               disabled={isPending || currentValue <= 0}>
               <Minus className="h-4 w-4" />
             </Button>
-            <span className="text-xl font-semibold w-12 text-center text-card-foreground tabular-nums">
+            <span className={`text-xl font-semibold w-12 text-center tabular-nums ${color || "text-card-foreground"}`}>
               {currentValue}
             </span>
             <Button

@@ -336,17 +336,6 @@ export default function NavigationBar() {
               {user.role === "Super Admin" ? (
                 <>
                   <NavigationMenuItem>
-                    <NavigationMenuTrigger
-                      className={cn(
-                        "text-xs lg:text-sm px-2",
-                        pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
-                      )}>
-                      Reports
-                    </NavigationMenuTrigger>
-                    <ReportsContent />
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
                     <NavigationMenuLink asChild>
                       <Link
                         href="/audit-trail"
@@ -609,41 +598,6 @@ export default function NavigationBar() {
 
                 {user.role === "Super Admin" ? (
                   <>
-                    {/* Reports & Logs Section */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium">Reports & Logs</h3>
-                      <div className="pl-2 space-y-2 flex flex-col">
-                        <Link
-                          href="/reports-and-logs/leave-history-report"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/leave-history-report"
-                              ? "text-primary"
-                              : "text-muted-foreground",
-                          )}>
-                          Leave History Report
-                        </Link>
-                        <Link
-                          href="/reports-and-logs/monthly-leave-util-report"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/monthly-leave-util-report"
-                              ? "text-primary"
-                              : "text-muted-foreground",
-                          )}>
-                          Monthly Leave Utilization
-                        </Link>
-                        <Link
-                          href="/reports-and-logs/approval-logs"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
-                          )}>
-                          Approval Logs
-                        </Link>
-                      </div>
-                    </div>
-
                     {/* Audit Trail */}
                     <Link
                       href="/audit-trail"
@@ -660,41 +614,6 @@ export default function NavigationBar() {
                   user.role !== "HR Admin" &&
                   user.role !== "Top Management" && (
                     <>
-                      {/* Reports & Logs Section */}
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-medium">Reports & Logs</h3>
-                        <div className="pl-2 space-y-2 flex flex-col">
-                          <Link
-                            href="/reports-and-logs/leave-history-report"
-                            className={cn(
-                              "text-sm transition-colors hover:text-primary",
-                              pathname === "/reports-and-logs/leave-history-report"
-                                ? "text-primary"
-                                : "text-muted-foreground",
-                            )}>
-                            Leave History Report
-                          </Link>
-                          <Link
-                            href="/reports-and-logs/monthly-leave-util-report"
-                            className={cn(
-                              "text-sm transition-colors hover:text-primary",
-                              pathname === "/reports-and-logs/monthly-leave-util-report"
-                                ? "text-primary"
-                                : "text-muted-foreground",
-                            )}>
-                            Monthly Leave Utilization
-                          </Link>
-                          <Link
-                            href="/reports-and-logs/approval-logs"
-                            className={cn(
-                              "text-sm transition-colors hover:text-primary",
-                              pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
-                            )}>
-                            Approval Logs
-                          </Link>
-                        </div>
-                      </div>
-
                       {/* Audit Trail */}
                       <Link
                         href="/audit-trail"

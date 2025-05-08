@@ -1,6 +1,6 @@
 import { integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
-export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected", "returned"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("user"),
   sex: text("sex").notNull(),
+  department: text("department"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   vacationLeave: integer("vacation_leave").notNull().default(0),
@@ -18,6 +19,12 @@ export const users = pgTable("users", {
   maternityLeave: integer("maternity_leave").notNull().default(0),
   paternityLeave: integer("paternity_leave").notNull().default(0),
   specialPrivilegeLeave: integer("special_privilege_leave").notNull().default(0),
+  usedVacationLeave: integer("used_vacation_leave").notNull().default(0),
+  usedMandatoryLeave: integer("used_mandatory_leave").notNull().default(0),
+  usedSickLeave: integer("used_sick_leave").notNull().default(0),
+  usedMaternityLeave: integer("used_maternity_leave").notNull().default(0),
+  usedPaternityLeave: integer("used_paternity_leave").notNull().default(0),
+  usedSpecialPrivilegeLeave: integer("used_special_privilege_leave").notNull().default(0),
 });
 
 export const leaveRequests = pgTable("leave_requests", {
@@ -29,6 +36,8 @@ export const leaveRequests = pgTable("leave_requests", {
   reason: text("reason").notNull(),
   status: leaveStatusEnum("status").default("pending").notNull(),
   supportingDoc: varchar("supporting_doc", { length: 255 }),
+  managerComments: text("manager_comments"),
+  managerId: integer("manager_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

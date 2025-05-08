@@ -4,13 +4,13 @@ import { LeaveBalanceCardClient } from "./leave-balance-card";
 import { SearchForm } from "./search-form";
 
 // Define leave type configurations
-const leaveTypeDefinitions: Array<{ key: LeaveTypeKey; label: string }> = [
-  { key: "vacationLeave", label: "Vacation Leave" },
-  { key: "mandatoryLeave", label: "Mandatory Leave" },
-  { key: "sickLeave", label: "Sick Leave" },
-  { key: "maternityLeave", label: "Maternity Leave" },
-  { key: "paternityLeave", label: "Paternity Leave" },
-  { key: "specialPrivilegeLeave", label: "Special Privilege Leave" },
+const leaveTypeDefinitions: Array<{ key: LeaveTypeKey; label: string; color: string }> = [
+  { key: "vacationLeave", label: "Vacation Leave", color: "text-blue-600" },
+  { key: "mandatoryLeave", label: "Mandatory Leave", color: "text-purple-600" },
+  { key: "sickLeave", label: "Sick Leave", color: "text-red-600" },
+  { key: "maternityLeave", label: "Maternity Leave", color: "text-pink-600" },
+  { key: "paternityLeave", label: "Paternity Leave", color: "text-teal-600" },
+  { key: "specialPrivilegeLeave", label: "Special Privilege Leave", color: "text-green-600" },
 ];
 
 export default async function EmployeeLeaveManagement({
@@ -116,6 +116,7 @@ export default async function EmployeeLeaveManagement({
                             leaveTypeKey={leaveDef.key}
                             label={leaveDef.label}
                             initialValue={leaveValue}
+                            color={leaveDef.color}
                           />
                         );
                       })}

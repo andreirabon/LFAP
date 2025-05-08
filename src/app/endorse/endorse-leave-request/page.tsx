@@ -8,76 +8,49 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-// Types
+// Updated Types to match schema and API response
 interface Employee {
-  id: string;
-  name: string;
-  department: string;
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string | null; // email can be null based on some DB schemas, adjust if always present
+  department: string | null;
 }
 
 interface LeaveRequest {
-  id: string;
+  id: number;
   employee: Employee;
   type: string;
-  startDate: string;
-  endDate: string;
-  totalDuration: number;
+  startDate: string; // ISO date string from API
+  endDate: string; // ISO date string from API
   reason: string;
-  submittedDate: string;
-  status: "Pending Manager Approval" | "Endorsed" | "Rejected" | "Returned";
-  managerComments?: string;
+  createdAt: string; // ISO date string from API (was submittedDate)
+  status: "pending" | "approved" | "rejected" | "returned";
+  supportingDoc?: string | null;
+  managerComments?: string | null;
 }
 
-// Sample data
-const sampleLeaveRequests: LeaveRequest[] = [
-  {
-    id: "LR-2024-001",
-    employee: {
-      id: "EMP001",
-      name: "John Doe",
-      department: "Information Technology",
-    },
-    type: "Vacation Leave",
-    startDate: "2024-03-20",
-    endDate: "2024-03-25",
-    totalDuration: 5,
-    reason: "Annual family vacation",
-    submittedDate: "2024-03-10",
-    status: "Pending Manager Approval",
-  },
-  {
-    id: "LR-2024-002",
-    employee: {
-      id: "EMP002",
-      name: "Jane Smith",
-      department: "Information Technology",
-    },
-    type: "Sick Leave",
-    startDate: "2024-03-18",
-    endDate: "2024-03-19",
-    totalDuration: 2,
-    reason: "Medical appointment and recovery",
-    submittedDate: "2024-03-15",
-    status: "Pending Manager Approval",
-  },
-  {
-    id: "LR-2024-003",
-    employee: {
-      id: "EMP003",
-      name: "Bob Wilson",
-      department: "Information Technology",
-    },
-    type: "Personal Leave",
-    startDate: "2024-03-22",
-    endDate: "2024-03-22",
-    totalDuration: 1,
-    reason: "Family event",
-    submittedDate: "2024-03-16",
-    status: "Pending Manager Approval",
-  },
-];
+// Helper to calculate duration (inclusive of start and end dates)
+function calculateDuration(startDateStr: string, endDateStr: string): number {
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+  // Calculate difference in days
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays + 1; // Add 1 for inclusive duration
+}
+
+// Map DB statuses to user-friendly display names
+const statusDisplayMap = {
+  pending: "Pending Approval",
+  approved: "Endorsed",
+  rejected: "Rejected",
+  returned: "Returned",
+};
 
 function formatDate(dateString: string) {
+  if (!dateString) return "N/A";
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -87,33 +60,45 @@ function formatDate(dateString: string) {
 
 export default function EndorseLeaveRequest() {
   const router = useRouter();
-  const [requests, setRequests] = useState<LeaveRequest[]>(sampleLeaveRequests);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]); // Initialize with empty array
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [managerComments, setManagerComments] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndFetchData = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/auth/session");
-        if (!response.ok) {
-          throw new Error("Failed to fetch session");
+        const authResponse = await fetch("/api/auth/session");
+        if (!authResponse.ok) {
+          // Consider more specific error handling or logging
+          throw new Error(`Session check failed: ${authResponse.status}`);
         }
-        const data = await response.json();
+        const authData = await authResponse.json();
 
-        if (!data.isLoggedIn) {
+        if (!authData.isLoggedIn) {
           router.replace("/login");
-          return;
+          return; // Exit early if not logged in
         }
 
-        setIsLoading(false);
+        // Fetch leave requests if authenticated
+        const requestsResponse = await fetch("/api/leave-requests/pending-endorsement");
+        if (!requestsResponse.ok) {
+          throw new Error(`Fetching leave requests failed: ${requestsResponse.status}`);
+        }
+        const fetchedRequests: LeaveRequest[] = await requestsResponse.json();
+        setRequests(fetchedRequests);
       } catch (error) {
-        console.error("Error checking auth:", error);
-        router.replace("/login");
+        console.error("Error during auth check or data fetching:", error);
+        toast.error("Failed to load data. Please try refreshing the page.");
+        // Optionally, redirect to login for critical auth errors after toast
+        // if (error.message.includes("Session check failed")) router.replace("/login");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    checkAuth();
+    checkAuthAndFetchData();
   }, [router]);
 
   const handleRequestSelect = (request: LeaveRequest) => {
@@ -121,38 +106,68 @@ export default function EndorseLeaveRequest() {
     setManagerComments(request.managerComments || "");
   };
 
-  const handleAction = (action: "Endorsed" | "Rejected" | "Returned") => {
-    if (!selectedRequest) return;
-    if (!managerComments.trim() && (action === "Rejected" || action === "Returned")) {
-      toast.error("Please provide comments before rejecting or returning the request");
+  // Action types matching DB statuses
+  type ActionDbStatus = "approved" | "rejected" | "returned";
+
+  // Updated handleAction to include API call
+  const handleAction = async (action: ActionDbStatus) => {
+    if (!selectedRequest) {
+      toast.error("No request selected.");
+      return;
+    }
+    if (!managerComments.trim() && (action === "rejected" || action === "returned")) {
+      toast.error("Comments are required to reject or return a request.");
       return;
     }
 
-    // Update the request status locally
-    const updatedRequests = requests.map((request) =>
-      request.id === selectedRequest.id
-        ? {
-            ...request,
-            status: action,
-            managerComments: managerComments.trim(),
-          }
-        : request,
-    );
+    // Replace with actual manager ID from session or context
+    // This is a placeholder.
+    // Ensure your auth system provides this ID.
+    const managerId = 1; // Example: const { user } = useAuth(); const managerId = user?.id;
 
-    setRequests(updatedRequests);
-    setSelectedRequest(null);
-    setManagerComments("");
-    toast.success(`Request ${action.toLowerCase()} successfully`);
+    try {
+      const response = await fetch(`/api/leave-requests/${selectedRequest.id}/action`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: action, // "approved", "rejected", or "returned"
+          managerComments: managerComments.trim(),
+          managerId: managerId, // Send the manager's ID
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${action} request. Status: ${response.status}`);
+      }
+
+      // const updatedRequestFromServer = await response.json(); // The updated request from server
+
+      toast.success(`Request successfully ${statusDisplayMap[action].toLowerCase()}.`);
+
+      // Refresh list by filtering out the processed request
+      setRequests((prevRequests) => prevRequests.filter((req) => req.id !== selectedRequest.id));
+
+      setSelectedRequest(null);
+      setManagerComments("");
+    } catch (error) {
+      console.error(`Error during ${action} action:`, error);
+      toast.error(
+        error instanceof Error ? error.message : "An unexpected error occurred while processing the request.",
+      );
+    }
   };
 
   const getStatusColor = (status: LeaveRequest["status"]) => {
     const colors = {
-      "Pending Manager Approval": "bg-yellow-100 text-yellow-800",
-      Endorsed: "bg-green-100 text-green-800",
-      Rejected: "bg-red-100 text-red-800",
-      Returned: "bg-orange-100 text-orange-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+      returned: "bg-orange-100 text-orange-800",
     };
-    return colors[status];
+    return colors[status] || "bg-gray-100 text-gray-800"; // Default/fallback color
   };
 
   if (isLoading) {
@@ -186,14 +201,15 @@ export default function EndorseLeaveRequest() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests
-                .filter((request) => request.status === "Pending Manager Approval")
+              {requests // Already filtered by API to be pending, or handled by local filter in handleAction
                 .map((request) => (
                   <TableRow
                     key={request.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRequestSelect(request)}>
-                    <TableCell className="font-medium">{request.employee.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {request.employee ? `${request.employee.firstName} ${request.employee.lastName}` : "N/A"}
+                    </TableCell>
                     <TableCell>{request.type}</TableCell>
                     <TableCell>{formatDate(request.startDate)}</TableCell>
                     <TableCell>{formatDate(request.endDate)}</TableCell>
@@ -202,7 +218,7 @@ export default function EndorseLeaveRequest() {
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
                           request.status,
                         )}`}>
-                        {request.status}
+                        {statusDisplayMap[request.status] || request.status}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -223,11 +239,14 @@ export default function EndorseLeaveRequest() {
               <div>
                 <h4 className="text-sm font-semibold">Employee Information</h4>
                 <p className="text-sm">
-                  Name: {selectedRequest.employee.name}
+                  Name:{" "}
+                  {selectedRequest.employee
+                    ? `${selectedRequest.employee.firstName} ${selectedRequest.employee.lastName}`
+                    : "N/A"}
                   <br />
-                  ID: {selectedRequest.employee.id}
+                  ID: {selectedRequest.employee ? selectedRequest.employee.id : "N/A"}
                   <br />
-                  Department: {selectedRequest.employee.department}
+                  Department: {selectedRequest.employee?.department || "N/A"}
                 </p>
               </div>
               <div>
@@ -237,7 +256,7 @@ export default function EndorseLeaveRequest() {
                   <br />
                   Duration: {formatDate(selectedRequest.startDate)} - {formatDate(selectedRequest.endDate)}
                   <br />
-                  Total Days: {selectedRequest.totalDuration}
+                  Total Days: {calculateDuration(selectedRequest.startDate, selectedRequest.endDate)}
                 </p>
               </div>
               <div>
@@ -246,7 +265,7 @@ export default function EndorseLeaveRequest() {
               </div>
               <div>
                 <h4 className="text-sm font-semibold">Submission Date</h4>
-                <p className="text-sm">{formatDate(selectedRequest.submittedDate)}</p>
+                <p className="text-sm">{formatDate(selectedRequest.createdAt)}</p>
               </div>
             </CardContent>
           </Card>
@@ -282,17 +301,17 @@ export default function EndorseLeaveRequest() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => handleAction("Endorsed")}
+                    onClick={() => handleAction("approved")} // Changed to "approved"
                     className="bg-green-600 hover:bg-green-700">
                     Endorse
                   </Button>
                   <Button
-                    onClick={() => handleAction("Rejected")}
+                    onClick={() => handleAction("rejected")} // Changed to "rejected"
                     variant="destructive">
                     Reject
                   </Button>
                   <Button
-                    onClick={() => handleAction("Returned")}
+                    onClick={() => handleAction("returned")} // Changed to "returned"
                     variant="outline"
                     className="bg-blue-600 hover:bg-blue-700 text-white">
                     Return for Clarification
