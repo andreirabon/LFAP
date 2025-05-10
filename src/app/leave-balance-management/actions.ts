@@ -107,6 +107,14 @@ const updateLeaveBalanceSchema = z.object({
 
 export type UpdateLeaveBalanceParams = z.infer<typeof updateLeaveBalanceSchema>;
 
+// Define a type for possible Drizzle ORM update result shapes
+type DrizzleUpdateResult =
+  | {
+      rowCount?: number;
+      rowsAffected?: number;
+    }
+  | unknown[];
+
 export async function updateEmployeeLeaveBalance(
   params: UpdateLeaveBalanceParams,
 ): Promise<{ success: boolean; message?: string; updatedBalance?: number }> {
@@ -119,20 +127,13 @@ export async function updateEmployeeLeaveBalance(
 
     const result = await db.update(users).set(updateData).where(eq(users.id, validatedParams.employeeId)).execute();
 
-    // Note: The structure of 'result' can vary based on the Drizzle driver.
-    // Assuming 'rowCount' is available for pg-like drivers.
-    // Adjust this check if your driver provides a different way to get affected rows (e.g., result.rowsAffected, or checking array length if returning values).
-    // For this example, we'll assume a property like result.rowCount exists.
-    // If using Drizzle PG with .execute() without .returning(), it often returns an empty array or specific result object.
-    // A more robust check might be needed depending on the specific DB driver and Drizzle version.
-    // For instance, if 'result' is an array from a .returning() clause, you'd check result.length.
-    // If it's an object like { count: number }, you'd check result.count.
-    // We'll proceed assuming some form of rowCount is available or implied.
-    // A simple check for now:
-    const rowsAffected =
-      (result as any).rowCount ||
-      (Array.isArray(result) && result.length > 0 ? result.length : 0) ||
-      ("rowsAffected" in result ? (result as any).rowsAffected : null);
+    // Cast result to our defined type for handling different return structures
+    const typedResult = result as DrizzleUpdateResult;
+
+    const rowsAffected: number | null =
+      ("rowCount" in typedResult && typeof typedResult.rowCount === "number" ? typedResult.rowCount : 0) ||
+      (Array.isArray(typedResult) && typedResult.length > 0 ? typedResult.length : 0) ||
+      ("rowsAffected" in typedResult && typeof typedResult.rowsAffected === "number" ? typedResult.rowsAffected : null);
 
     if (rowsAffected === null || rowsAffected > 0) {
       // Assuming success if rowsAffected is not definitively zero.

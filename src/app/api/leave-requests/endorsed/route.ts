@@ -3,7 +3,7 @@ import { leaveRequests, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const endorsedRequests = await db
       .select({

@@ -11,8 +11,9 @@ const actionSchema = z.object({
   managerId: z.number().optional(), // Assuming you get managerId from session or client
 });
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const leaveRequestId = parseInt(params.id, 10);
+// Update the type definition to match Next.js's expectations
+export async function PATCH(request: Request, context: { params: { id: string } }) {
+  const leaveRequestId = parseInt(context.params.id, 10);
 
   if (isNaN(leaveRequestId)) {
     return NextResponse.json({ error: "Invalid leave request ID" }, { status: 400 });
