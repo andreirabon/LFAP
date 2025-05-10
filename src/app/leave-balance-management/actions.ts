@@ -20,6 +20,8 @@ export interface Employee {
   lastName: string;
   email: string;
   role: string;
+  sex: string;
+  department: string | null;
   vacationLeave: number;
   mandatoryLeave: number;
   sickLeave: number;
@@ -73,6 +75,8 @@ export async function searchEmployees(params: EmployeeSearchParams): Promise<Emp
         lastName: users.lastName,
         email: users.email,
         role: users.role,
+        sex: users.sex,
+        department: users.department,
         vacationLeave: users.vacationLeave,
         mandatoryLeave: users.mandatoryLeave,
         sickLeave: users.sickLeave,

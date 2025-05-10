@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Edit3, Loader2, Minus, Plus, Save, XCircle } from "lucide-react"; // Added Edit3 for Update button icon
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -53,6 +54,17 @@ export function LeaveBalanceCardClient({
     setCurrentValue((prev) => Math.max(0, prev - 1)); // Ensure not negative
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow empty input (user is typing) or valid positive numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      // Convert to number if not empty, otherwise keep as is for UX while typing
+      const numValue = value === "" ? 0 : parseInt(value, 10);
+      setCurrentValue(numValue);
+    }
+  };
+
   const handleSave = () => {
     if (currentValue === initialValue) {
       toast.info("No Changes", { description: "The leave balance value is the same as before." });
@@ -101,9 +113,15 @@ export function LeaveBalanceCardClient({
               disabled={isPending || currentValue <= 0}>
               <Minus className="h-4 w-4" />
             </Button>
-            <span className={`text-xl font-semibold w-12 text-center tabular-nums ${color || "text-card-foreground"}`}>
-              {currentValue}
-            </span>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={currentValue.toString()}
+              onChange={handleInputChange}
+              className={`w-16 text-center font-semibold text-lg ${color || "text-card-foreground"}`}
+              disabled={isPending}
+            />
             <Button
               variant="outline"
               size="icon"

@@ -95,31 +95,42 @@ export default async function EmployeeLeaveManagement({
                       {employee.firstName} {employee.lastName}
                     </CardTitle>
                     <CardDescription>
-                      Employee ID: {employee.id} | Role: {employee.role}
+                      Employee ID: {employee.id} | Deparment: {employee.department}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <h3 className="text-lg font-semibold mb-4">Leave Balances</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {leaveTypeDefinitions.map((leaveDef) => {
-                        const leaveValue = employee[leaveDef.key];
-                        if (typeof leaveValue !== "number") {
-                          console.warn(
-                            `Employee ID ${employee.id} missing or invalid value for leave type ${leaveDef.key}`,
+                      {leaveTypeDefinitions
+                        .filter((leaveDef) => {
+                          // Filter out maternity leave for males and paternity leave for females
+                          if (leaveDef.key === "maternityLeave" && employee.sex.toLowerCase() === "male") {
+                            return false;
+                          }
+                          if (leaveDef.key === "paternityLeave" && employee.sex.toLowerCase() === "female") {
+                            return false;
+                          }
+                          return true;
+                        })
+                        .map((leaveDef) => {
+                          const leaveValue = employee[leaveDef.key];
+                          if (typeof leaveValue !== "number") {
+                            console.warn(
+                              `Employee ID ${employee.id} missing or invalid value for leave type ${leaveDef.key}`,
+                            );
+                            return null;
+                          }
+                          return (
+                            <LeaveBalanceCardClient
+                              key={leaveDef.key}
+                              employeeId={employee.id}
+                              leaveTypeKey={leaveDef.key}
+                              label={leaveDef.label}
+                              initialValue={leaveValue}
+                              color={leaveDef.color}
+                            />
                           );
-                          return null;
-                        }
-                        return (
-                          <LeaveBalanceCardClient
-                            key={leaveDef.key}
-                            employeeId={employee.id}
-                            leaveTypeKey={leaveDef.key}
-                            label={leaveDef.label}
-                            initialValue={leaveValue}
-                            color={leaveDef.color}
-                          />
-                        );
-                      })}
+                        })}
                     </div>
                   </CardContent>
                 </Card>

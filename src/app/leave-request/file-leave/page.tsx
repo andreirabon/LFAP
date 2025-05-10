@@ -67,9 +67,10 @@ export default function FileLeave() {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userSex, setUserSex] = useState<string | null>(null);
   const router = useRouter();
 
-  // Add useEffect to fetch leave balances
+  // Fetch leave balances and user's sex
   useEffect(() => {
     const fetchLeaveBalances = async () => {
       try {
@@ -78,7 +79,11 @@ export default function FileLeave() {
           throw new Error("Failed to fetch leave balances");
         }
         const data = await response.json();
+        console.log("API Response:", data);
+        console.log("User Sex:", data.userSex);
+        console.log("Leave Balances:", data.leaveBalances);
         setLeaveBalances(data.leaveBalances);
+        setUserSex(data.userSex);
       } catch (error) {
         console.error("Error fetching leave balances:", error);
         toast.error("Failed to load leave balances");
@@ -115,8 +120,9 @@ export default function FileLeave() {
     resolver: zodResolver(formSchema),
   });
 
-  // const selectedLeaveType = form.watch("leaveType");
-  // const selectedBalance = leaveBalances.find((balance) => balance.type === selectedLeaveType);
+  // Get the selected leave type and remaining days
+  const selectedLeaveType = form.watch("leaveType");
+  const selectedBalance = leaveBalances.find((balance) => balance.type === selectedLeaveType);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -238,6 +244,24 @@ export default function FileLeave() {
                   </FormItem>
                 )}
               />
+
+              {/* Show selected leave information if available */}
+              {selectedBalance && (
+                <div className="rounded-md bg-muted p-3 text-sm">
+                  <p>
+                    <span className="font-medium">Selected Leave:</span> {selectedBalance.type}
+                  </p>
+                  <p>
+                    <span className="font-medium">Total Days:</span> {selectedBalance.total}
+                  </p>
+                  <p>
+                    <span className="font-medium">Used Days:</span> {selectedBalance.used}
+                  </p>
+                  <p>
+                    <span className="font-medium">Remaining Days:</span> {selectedBalance.remaining}
+                  </p>
+                </div>
+              )}
 
               {/* Date Selection */}
               <FormField
