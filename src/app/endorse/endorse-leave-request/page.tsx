@@ -263,7 +263,7 @@ export default function EndorseLeaveRequest() {
         if (responseData?.error) {
           // If there are validation details, display them
           if (responseData.details && Array.isArray(responseData.details)) {
-            const errorMessages = responseData.details.map((d: any) => d.message).join(", ");
+            const errorMessages = responseData.details.map((d: { message: string }) => d.message).join(", ");
             throw new Error(`${responseData.error}: ${errorMessages}`);
           } else {
             throw new Error(responseData.error);

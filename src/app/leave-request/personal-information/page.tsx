@@ -47,7 +47,7 @@ interface UserLeaveHistory {
   startDate: string;
   endDate: string;
   numberOfDays: number;
-  status: "pending" | "approved" | "rejected"; // From schema
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved"; // Match the schema enum
   // approvedBy?: string; // Not in schema
   // approvedDate?: string; // Not in schema
   createdAt: string;

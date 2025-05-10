@@ -13,28 +13,26 @@ const leaveTypeDefinitions: Array<{ key: LeaveTypeKey; label: string; color: str
   { key: "specialPrivilegeLeave", label: "Special Privilege Leave", color: "text-green-600" },
 ];
 
-export default async function EmployeeLeaveManagement({
-  searchParams,
-}: {
-  searchParams: { employeeId?: string; firstName?: string; lastName?: string };
-}) {
+type SearchParamsProps = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  searchParams: any;
+};
+
+export default async function EmployeeLeaveManagement({ searchParams }: SearchParamsProps) {
   let employees: Employee[] = [];
   let error: string | null = null;
   let hasSearched = false;
 
-  // Ensure async context is established immediately before accessing searchParams
-  await Promise.resolve();
+  // Type-safe way to get search params
+  const employeeId = typeof searchParams.employeeId === "string" ? searchParams.employeeId : "";
+  const firstName = typeof searchParams.firstName === "string" ? searchParams.firstName : "";
+  const lastName = typeof searchParams.lastName === "string" ? searchParams.lastName : "";
 
-  // Access searchParams properties first
-  const rawEmployeeId = searchParams.employeeId;
-  const rawFirstName = searchParams.firstName;
-  const rawLastName = searchParams.lastName;
-
-  // Then, create the params object with fallbacks
+  // Create params object
   const params = {
-    employeeId: rawEmployeeId || "",
-    firstName: rawFirstName || "",
-    lastName: rawLastName || "",
+    employeeId,
+    firstName,
+    lastName,
   };
 
   // Use individual checks with the resolved params

@@ -67,7 +67,6 @@ export default function FileLeave() {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userSex, setUserSex] = useState<string | null>(null);
   const router = useRouter();
 
   // Fetch leave balances and user's sex
@@ -83,7 +82,6 @@ export default function FileLeave() {
         console.log("User Sex:", data.userSex);
         console.log("Leave Balances:", data.leaveBalances);
         setLeaveBalances(data.leaveBalances);
-        setUserSex(data.userSex);
       } catch (error) {
         console.error("Error fetching leave balances:", error);
         toast.error("Failed to load leave balances");
