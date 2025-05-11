@@ -25,7 +25,7 @@ async function sendNotificationEmail(email: string, subject: string, message: st
 // Define a schema for the request body
 const actionSchema = z
   .object({
-    action: z.enum(["approved", "rejected", "returned", "tm_approved", "tm_rejected", "tm_returned"]),
+    action: z.enum(["approved", "rejected", "returned", "endorsed", "tm_approved", "tm_rejected", "tm_returned"]),
     managerComments: z.string().optional(),
     managerId: z.number().optional(), // Manager or top management ID
   })
@@ -75,6 +75,14 @@ async function updateLeaveBalance(userId: number, leaveType: string, days: numbe
         totalField: "mandatoryLeave",
         usedField: "usedMandatoryLeave",
       },
+      "Mandatory/Force Leave": {
+        totalField: "mandatoryLeave",
+        usedField: "usedMandatoryLeave",
+      },
+      "Mandatory/Forced Leave": {
+        totalField: "mandatoryLeave",
+        usedField: "usedMandatoryLeave",
+      },
       "Sick Leave": {
         totalField: "sickLeave",
         usedField: "usedSickLeave",
@@ -111,9 +119,12 @@ async function updateLeaveBalance(userId: number, leaveType: string, days: numbe
     // Check if user has enough balance
     const totalBalance = user[mapping.totalField as keyof typeof user] as number;
     const usedBalance = user[mapping.usedField as keyof typeof user] as number;
+    const remainingBalance = totalBalance - usedBalance;
 
-    if (totalBalance - usedBalance < days) {
-      throw new Error(`Insufficient leave balance for ${leaveType}`);
+    if (remainingBalance < days) {
+      throw new Error(
+        `Insufficient leave balance for ${leaveType}. Available: ${remainingBalance} days, Requested: ${days} days`,
+      );
     }
 
     // Update used balance
@@ -229,6 +240,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         // If we get here, transaction was successful
       } catch (txError) {
         console.error("Transaction failed:", txError);
+
+        // Check if the error is related to insufficient leave balance
+        if ((txError as Error).message.includes("Insufficient leave balance")) {
+          return NextResponse.json(
+            {
+              error: "Insufficient leave balance",
+              details: (txError as Error).message,
+              type: "leave_balance_error",
+            },
+            { status: 400 },
+          );
+        }
+
         return NextResponse.json(
           { error: "Failed to approve leave request", details: (txError as Error).message },
           { status: 500 },
@@ -270,6 +294,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 <p>Your leave request for ${new Date(leaveRequest.startDate).toLocaleDateString()} to ${new Date(
                 leaveRequest.endDate,
               ).toLocaleDateString()} has been approved.</p>
+                ${managerComments ? `<p><strong>Comments:</strong> ${managerComments}</p>` : ""}
+                <p>Regards,<br/>HR Team</p>`;
+              break;
+
+            case "endorsed":
+              subject = "Your Leave Request Has Been Endorsed";
+              message = `<p>Dear ${employee[0].firstName},</p>
+                <p>Your leave request for ${new Date(leaveRequest.startDate).toLocaleDateString()} to ${new Date(
+                leaveRequest.endDate,
+              ).toLocaleDateString()} has been endorsed and forwarded for final approval.</p>
                 ${managerComments ? `<p><strong>Comments:</strong> ${managerComments}</p>` : ""}
                 <p>Regards,<br/>HR Team</p>`;
               break;

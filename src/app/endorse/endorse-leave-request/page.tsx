@@ -83,6 +83,7 @@ export default function EndorseLeaveRequest() {
   const [isProcessing, setIsProcessing] = useState(false); // Add loading state for actions
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<ActionDbStatus | null>(null);
+  const [dialogAction, setDialogAction] = useState<ActionDbStatus | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [commentsError, setCommentsError] = useState<string | null>(null);
@@ -259,6 +260,12 @@ export default function EndorseLeaveRequest() {
       }
 
       if (!response.ok) {
+        // Handle specific error type for insufficient leave balance
+        if (responseData?.type === "leave_balance_error") {
+          toast.error(responseData.details || "Insufficient leave balance");
+          return;
+        }
+
         // Display more detailed error message if available
         if (responseData?.error) {
           // If there are validation details, display them
@@ -309,11 +316,14 @@ export default function EndorseLeaveRequest() {
       if (!validateComments(action, managerComments)) {
         return;
       }
+      // Set both the pending action and dialog action
       setPendingAction(action);
+      setDialogAction(action);
       setShowConfirmDialog(true);
     } else if (action === "endorsed") {
       // For endorse action, show confirmation dialog without comment validation
       setPendingAction(action);
+      setDialogAction(action);
       setShowConfirmDialog(true);
     } else {
       // For other actions, proceed directly
@@ -324,14 +334,20 @@ export default function EndorseLeaveRequest() {
   const confirmAction = () => {
     if (pendingAction) {
       handleAction(pendingAction);
-      setPendingAction(null);
+      // Close dialog first
       setShowConfirmDialog(false);
+      // Clear states after dialog is closed
+      setPendingAction(null);
+      // Don't need to clear dialogAction immediately as it won't affect UI once dialog is closed
     }
   };
 
   const cancelAction = () => {
-    setPendingAction(null);
+    // Close dialog first
     setShowConfirmDialog(false);
+    // Clear pending action
+    setPendingAction(null);
+    // Don't need to clear dialogAction immediately as it won't affect UI once dialog is closed
   };
 
   const renderLoadingSkeleton = () => (
@@ -578,39 +594,48 @@ export default function EndorseLeaveRequest() {
         </Card>
       )}
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog - Use dialogAction for dialog content instead of pendingAction */}
       <AlertDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}>
+        open={showConfirmDialog && pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            // Just close the dialog - don't change other states in the handler
+            setShowConfirmDialog(false);
+          }
+        }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingAction === "rejected"
+              {dialogAction === "rejected"
                 ? "Reject Leave Request"
-                : pendingAction === "returned"
+                : dialogAction === "returned"
                 ? "Return Leave Request"
                 : "Endorse Leave Request"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction === "rejected"
+              {dialogAction === "rejected"
                 ? "Are you sure you want to reject this leave request? This action cannot be undone."
-                : pendingAction === "returned"
-                ? "Are you sure you want to return this leave request for clarification?"
+                : dialogAction === "returned"
+                ? "Are you sure you want to return this leave request for clarification? This action cannot be undone."
                 : "Are you sure you want to endorse this leave request? This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelAction}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              onClick={cancelAction}
+              className="bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 shadow-sm transition-colors">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmAction}
               className={
-                pendingAction === "rejected"
+                dialogAction === "rejected"
                   ? "bg-red-600 hover:bg-red-700"
-                  : pendingAction === "endorsed"
+                  : dialogAction === "endorsed"
                   ? "bg-green-600 hover:bg-green-700"
-                  : ""
+                  : "bg-blue-600 hover:bg-blue-700"
               }>
-              {pendingAction === "rejected" ? "Reject" : pendingAction === "returned" ? "Return" : "Endorse"}
+              {dialogAction === "rejected" ? "Reject" : dialogAction === "returned" ? "Return" : "Endorse"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

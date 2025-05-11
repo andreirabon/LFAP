@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +58,11 @@ export default function PendingApprovals() {
   const [managementComments, setManagementComments] = useState("");
   const [isCommentsError, setIsCommentsError] = useState(false);
 
+  // State for confirmation dialogs
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+
   // Fetch endorsed leave requests when component mounts
   useEffect(() => {
     const fetchEndorsedRequests = async () => {
@@ -92,10 +107,24 @@ export default function PendingApprovals() {
     return true;
   };
 
+  const handleConfirmAction = (action: "approved" | "rejected" | "returned") => {
+    if (!validateComments(action)) return;
+
+    switch (action) {
+      case "approved":
+        setShowApproveDialog(true);
+        break;
+      case "rejected":
+        setShowRejectDialog(true);
+        break;
+      case "returned":
+        setShowReturnDialog(true);
+        break;
+    }
+  };
+
   const handleAction = async (action: "approved" | "rejected" | "returned") => {
     if (!selectedRequest) return;
-
-    if (!validateComments(action)) return;
 
     setIsProcessing(true);
 
@@ -145,6 +174,13 @@ export default function PendingApprovals() {
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // Handle specific error type for insufficient leave balance
+        if (errorData.type === "leave_balance_error") {
+          toast.error(errorData.details || "Insufficient leave balance");
+          return;
+        }
+
         throw new Error(errorData.error || "Failed to process leave request");
       }
 
@@ -162,6 +198,11 @@ export default function PendingApprovals() {
       toast.error(`Failed to ${action} leave request. Please try again.`);
     } finally {
       setIsProcessing(false);
+
+      // Close all dialogs
+      setShowApproveDialog(false);
+      setShowRejectDialog(false);
+      setShowReturnDialog(false);
     }
   };
 
@@ -369,20 +410,20 @@ export default function PendingApprovals() {
 
                 <div className="flex flex-wrap gap-3">
                   <Button
-                    onClick={() => handleAction("approved")}
+                    onClick={() => handleConfirmAction("approved")}
                     className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={isProcessing}>
                     {isProcessing ? "Processing..." : "Approve Leave Request"}
                   </Button>
                   <Button
-                    onClick={() => handleAction("rejected")}
+                    onClick={() => handleConfirmAction("rejected")}
                     variant="destructive"
                     disabled={isProcessing}
                     className="bg-red-600 hover:bg-red-700">
                     {isProcessing ? "Processing..." : "Reject Leave Request"}
                   </Button>
                   <Button
-                    onClick={() => handleAction("returned")}
+                    onClick={() => handleConfirmAction("returned")}
                     variant="outline"
                     disabled={isProcessing}
                     className="bg-blue-500 hover:bg-blue-600 text-white">
@@ -394,6 +435,87 @@ export default function PendingApprovals() {
           </CardContent>
         </Card>
       )}
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog
+        open={showApproveDialog}
+        onOpenChange={setShowApproveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Leave Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this leave request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 shadow-sm transition-colors"
+              disabled={isProcessing}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleAction("approved")}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700 text-white">
+              {isProcessing ? "Processing..." : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog
+        open={showRejectDialog}
+        onOpenChange={setShowRejectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Leave Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this leave request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 shadow-sm transition-colors"
+              disabled={isProcessing}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleAction("rejected")}
+              disabled={isProcessing}
+              className="bg-red-600 hover:bg-red-700 text-white">
+              {isProcessing ? "Processing..." : "Reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Return Confirmation Dialog */}
+      <AlertDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Return to Manager</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to return this leave request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isProcessing}
+              className="bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 shadow-sm transition-colors">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleAction("returned")}
+              disabled={isProcessing}
+              className="bg-blue-500 hover:bg-blue-600 text-white">
+              {isProcessing ? "Processing..." : "Return"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

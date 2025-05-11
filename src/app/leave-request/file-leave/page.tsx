@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +77,7 @@ export default function FileLeave() {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const router = useRouter();
 
   // Fetch leave balances and user's sex
@@ -122,6 +133,34 @@ export default function FileLeave() {
   const selectedLeaveType = form.watch("leaveType");
   const selectedBalance = leaveBalances.find((balance) => balance.type === selectedLeaveType);
 
+  const handleFileAnother = () => {
+    form.reset();
+    setShowConfirmDialog(false);
+    // Refresh leave balances
+    setIsLoadingBalances(true);
+    fetchLeaveBalances();
+  };
+
+  const handleViewStatus = () => {
+    router.push("/leave-request/track-status");
+  };
+
+  const fetchLeaveBalances = async () => {
+    try {
+      const response = await fetch("/api/leave-requests/leave-balances");
+      if (!response.ok) {
+        throw new Error("Failed to fetch leave balances");
+      }
+      const data = await response.json();
+      setLeaveBalances(data.leaveBalances);
+    } catch (error) {
+      console.error("Error fetching leave balances:", error);
+      toast.error("Failed to load leave balances");
+    } finally {
+      setIsLoadingBalances(false);
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
@@ -168,8 +207,7 @@ export default function FileLeave() {
       }
 
       toast.success("Leave request submitted successfully");
-      form.reset();
-      router.push("/leave-request/track-status");
+      setShowConfirmDialog(true);
     } catch (error: unknown) {
       console.error("Leave request submission failed:", error);
       toast.error(error instanceof Error ? error.message : "Failed to submit leave request");
@@ -370,6 +408,33 @@ export default function FileLeave() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Request Submitted</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your leave request has been submitted successfully. Would you like to file another leave request or view
+              your request status?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleViewStatus}
+              className="bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 shadow-sm transition-colors">
+              View Status
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleFileAnother}
+              className="bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+              File Another
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

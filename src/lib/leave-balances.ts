@@ -8,6 +8,7 @@ export async function getUserLeaveBalances(userId: number): Promise<LeaveBalance
     const userLeaveBalances = await db.query.users.findFirst({
       where: eq(users.id, userId),
       columns: {
+        sex: true,
         vacationLeave: true,
         mandatoryLeave: true,
         sickLeave: true,
@@ -28,7 +29,7 @@ export async function getUserLeaveBalances(userId: number): Promise<LeaveBalance
     }
 
     // Transform the database result into the LeaveBalance[] format
-    return [
+    const leaveBalances: LeaveBalance[] = [
       {
         type: "Vacation Leave",
         total: userLeaveBalances.vacationLeave,
@@ -54,22 +55,6 @@ export async function getUserLeaveBalances(userId: number): Promise<LeaveBalance
         color: "text-red-600",
       },
       {
-        type: "Maternity Leave",
-        total: userLeaveBalances.maternityLeave,
-        used: userLeaveBalances.usedMaternityLeave ?? 0,
-        remaining: userLeaveBalances.maternityLeave - (userLeaveBalances.usedMaternityLeave ?? 0),
-        description: "Leave for childbirth and maternal care",
-        color: "text-pink-600",
-      },
-      {
-        type: "Paternity Leave",
-        total: userLeaveBalances.paternityLeave,
-        used: userLeaveBalances.usedPaternityLeave ?? 0,
-        remaining: userLeaveBalances.paternityLeave - (userLeaveBalances.usedPaternityLeave ?? 0),
-        description: "Leave for fathers after childbirth",
-        color: "text-indigo-600",
-      },
-      {
         type: "Special Privilege Leave",
         total: userLeaveBalances.specialPrivilegeLeave,
         used: userLeaveBalances.usedSpecialPrivilegeLeave ?? 0,
@@ -78,6 +63,37 @@ export async function getUserLeaveBalances(userId: number): Promise<LeaveBalance
         color: "text-green-600",
       },
     ];
+
+    // Add gender-specific leave types based on user's sex
+    const userSex = userLeaveBalances.sex?.toLowerCase();
+    const isMale = userSex === "male" || userSex === "m";
+    const isFemale = userSex === "female" || userSex === "f";
+
+    // Add Paternity Leave for male users
+    if (isMale) {
+      leaveBalances.push({
+        type: "Paternity Leave",
+        total: userLeaveBalances.paternityLeave,
+        used: userLeaveBalances.usedPaternityLeave ?? 0,
+        remaining: userLeaveBalances.paternityLeave - (userLeaveBalances.usedPaternityLeave ?? 0),
+        description: "Leave for fathers after childbirth",
+        color: "text-indigo-600",
+      });
+    }
+
+    // Add Maternity Leave for female users
+    if (isFemale) {
+      leaveBalances.push({
+        type: "Maternity Leave",
+        total: userLeaveBalances.maternityLeave,
+        used: userLeaveBalances.usedMaternityLeave ?? 0,
+        remaining: userLeaveBalances.maternityLeave - (userLeaveBalances.usedMaternityLeave ?? 0),
+        description: "Leave for childbirth and maternal care",
+        color: "text-pink-600",
+      });
+    }
+
+    return leaveBalances;
   } catch (error) {
     console.error("Error fetching user leave balances:", error);
     throw error;
