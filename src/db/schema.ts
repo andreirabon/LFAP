@@ -1,6 +1,15 @@
 import { integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
-export const leaveStatusEnum = pgEnum("leave_status", ["pending", "endorsed", "rejected", "returned", "approved"]);
+export const leaveStatusEnum = pgEnum("leave_status", [
+  "pending",
+  "endorsed",
+  "rejected",
+  "returned",
+  "approved",
+  "tm_approved",
+  "tm_rejected",
+  "tm_returned",
+]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

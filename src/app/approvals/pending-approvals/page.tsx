@@ -123,8 +123,15 @@ export default function PendingApprovals() {
         return;
       }
 
+      // Map actions to top management actions
+      const tmActionMap: Record<string, string> = {
+        approved: "tm_approved",
+        rejected: "tm_rejected",
+        returned: "tm_returned",
+      };
+
       const requestBody = {
-        action,
+        action: tmActionMap[action],
         managerId,
         managerComments: managementComments.trim() || undefined,
       };
@@ -142,24 +149,15 @@ export default function PendingApprovals() {
         throw new Error(errorData.error || "Failed to process leave request");
       }
 
+      // Get the response data
+      const responseData = await response.json();
+
       // Update the UI - remove the processed request from the list
       setEndorsedRequests(endorsedRequests.filter((req) => req.id !== selectedRequest.id));
       setSelectedRequest(null);
 
       // Show success message
-      let actionMessage = "";
-      switch (action) {
-        case "approved":
-          actionMessage = "approved";
-          break;
-        case "rejected":
-          actionMessage = "rejected";
-          break;
-        case "returned":
-          actionMessage = "returned to manager";
-          break;
-      }
-      toast.success(`Leave request ${actionMessage} successfully`);
+      toast.success(responseData.message || `Leave request ${action} successfully`);
     } catch (error) {
       console.error(`Error ${action} leave request:`, error);
       toast.error(`Failed to ${action} leave request. Please try again.`);

@@ -35,7 +35,7 @@ export default async function ViewLeaveBalances() {
                   <CardContent>
                     <div className="space-y-3">
                       <Progress
-                        value={(leave.remaining / leave.total) * 100}
+                        value={leave.total > 0 ? (leave.remaining / leave.total) * 100 : 0}
                         className={`h-2 [&>div]:bg-current ${leave.color}`}
                       />
                       <div className="flex justify-between text-sm">

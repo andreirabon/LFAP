@@ -13,7 +13,7 @@ interface DbLeaveRequest {
   type: string;
   startDate: Date;
   endDate: Date;
-  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
   createdAt: Date;
   updatedAt: Date;
   userId: number;
@@ -28,7 +28,7 @@ interface LeaveRequest {
   startDate: string;
   endDate: string;
   numberOfDays: number;
-  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
   submittedDate: string;
 }
 
@@ -39,8 +39,25 @@ function getStatusColor(status: LeaveRequest["status"]) {
     approved: "bg-green-100 text-green-800",
     rejected: "bg-red-100 text-red-800",
     returned: "bg-orange-100 text-orange-800",
+    tm_approved: "bg-emerald-100 text-emerald-800",
+    tm_rejected: "bg-rose-100 text-rose-800",
+    tm_returned: "bg-amber-100 text-amber-800",
   };
   return colors[status];
+}
+
+function getStatusDisplayText(status: LeaveRequest["status"]) {
+  const displayText = {
+    pending: "Waiting to be Endorsed by Manager",
+    endorsed: "Endorsed by the Manager",
+    approved: "Approved by the Manager",
+    rejected: "Rejected by the Manager",
+    returned: "Returned by the Manager",
+    tm_approved: "Approved by the Top Management",
+    tm_rejected: "Rejected by the Top Management",
+    tm_returned: "Returned by the Top Management",
+  };
+  return displayText[status];
 }
 
 function formatDate(date: Date | string) {
@@ -126,7 +143,7 @@ export default async function TrackStatus() {
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
                           request.status,
                         )}`}>
-                        {request.status}
+                        {getStatusDisplayText(request.status)}
                       </span>
                     </TableCell>
                     <TableCell>{formatDate(request.submittedDate)}</TableCell>

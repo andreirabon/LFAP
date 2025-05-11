@@ -1,5 +1,5 @@
 import db from "@/db";
-import { leaveRequests, leaveStatusEnum, users } from "@/db/schema";
+import { leaveRequests, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -25,26 +25,32 @@ async function sendNotificationEmail(email: string, subject: string, message: st
 // Define a schema for the request body
 const actionSchema = z
   .object({
-    action: z.enum(leaveStatusEnum.enumValues), // Use the enum values directly
+    action: z.enum(["approved", "rejected", "returned", "tm_approved", "tm_rejected", "tm_returned"]),
     managerComments: z.string().optional(),
-    managerId: z.number().optional(), // Assuming you get managerId from session or client
+    managerId: z.number().optional(), // Manager or top management ID
   })
   .superRefine((data, ctx) => {
-    // Comments are required for 'rejected' or 'returned' status
+    // Comments are required for 'rejected', 'returned', 'tm_rejected', or 'tm_returned' status
     if (
-      (data.action === "rejected" || data.action === "returned") &&
+      (data.action === "rejected" ||
+        data.action === "returned" ||
+        data.action === "tm_rejected" ||
+        data.action === "tm_returned") &&
       (!data.managerComments || data.managerComments.trim() === "")
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Manager comments are required for this action",
+        message: "Comments are required for this action",
         path: ["managerComments"],
       });
     }
 
-    // Validate comment length for 'rejected' or 'returned' status
+    // Validate comment length
     if (
-      (data.action === "rejected" || data.action === "returned") &&
+      (data.action === "rejected" ||
+        data.action === "returned" ||
+        data.action === "tm_rejected" ||
+        data.action === "tm_returned") &&
       data.managerComments &&
       data.managerComments.trim().length < 10
     ) {
@@ -55,6 +61,82 @@ const actionSchema = z
       });
     }
   });
+
+// Helper to update leave balances
+async function updateLeaveBalance(userId: number, leaveType: string, days: number) {
+  try {
+    // Map the leave type from request to the corresponding user fields
+    const fieldMapping: Record<string, { totalField: string; usedField: string }> = {
+      "Vacation Leave": {
+        totalField: "vacationLeave",
+        usedField: "usedVacationLeave",
+      },
+      "Mandatory Leave": {
+        totalField: "mandatoryLeave",
+        usedField: "usedMandatoryLeave",
+      },
+      "Sick Leave": {
+        totalField: "sickLeave",
+        usedField: "usedSickLeave",
+      },
+      "Maternity Leave": {
+        totalField: "maternityLeave",
+        usedField: "usedMaternityLeave",
+      },
+      "Paternity Leave": {
+        totalField: "paternityLeave",
+        usedField: "usedPaternityLeave",
+      },
+      "Special Privilege Leave": {
+        totalField: "specialPrivilegeLeave",
+        usedField: "usedSpecialPrivilegeLeave",
+      },
+    };
+
+    // Get the field mapping for this leave type
+    const mapping = fieldMapping[leaveType];
+    if (!mapping) {
+      throw new Error(`Invalid leave type: ${leaveType}`);
+    }
+
+    // Get current user record
+    const userRecord = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+    if (!userRecord.length) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    const user = userRecord[0];
+
+    // Check if user has enough balance
+    const totalBalance = user[mapping.totalField as keyof typeof user] as number;
+    const usedBalance = user[mapping.usedField as keyof typeof user] as number;
+
+    if (totalBalance - usedBalance < days) {
+      throw new Error(`Insufficient leave balance for ${leaveType}`);
+    }
+
+    // Update used balance
+    const updateData: Partial<typeof users.$inferInsert> = {};
+    updateData[mapping.usedField as keyof typeof updateData] = usedBalance + days;
+
+    // Update the user record
+    await db.update(users).set(updateData).where(eq(users.id, userId));
+
+    return true;
+  } catch (error) {
+    console.error("Error updating leave balance:", error);
+    throw error;
+  }
+}
+
+// Calculate duration in days
+function calculateDuration(startDate: Date, endDate: Date): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
+}
 
 // Update the type definition to match Next.js's expectations
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -87,9 +169,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Leave request not found" }, { status: 404 });
     }
 
+    const leaveRequest = currentLeaveRequest[0];
+
+    // Prepare update data
     const updateData: Partial<typeof leaveRequests.$inferInsert> = {
       status: action,
-      managerComments: managerComments?.trim() || null,
+      managerComments: managerComments?.trim() || leaveRequest.managerComments,
       updatedAt: new Date(),
     };
 
@@ -97,58 +182,119 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       updateData.managerId = managerId;
     }
 
-    const updatedRequest = await db
-      .update(leaveRequests)
-      .set(updateData)
-      .where(eq(leaveRequests.id, leaveRequestId))
-      .returning();
+    let updatedRequest;
 
-    if (updatedRequest.length === 0) {
-      return NextResponse.json({ error: "Leave request not found or no changes made" }, { status: 404 });
+    // Handle top management approval with transaction
+    if (action === "tm_approved") {
+      try {
+        // Start a transaction to ensure both updates succeed or fail together
+        await db.transaction(async (tx) => {
+          // 1. Update leave request status
+          updatedRequest = await tx
+            .update(leaveRequests)
+            .set(updateData)
+            .where(eq(leaveRequests.id, leaveRequestId))
+            .returning();
+
+          if (!updatedRequest.length) {
+            throw new Error("Failed to update leave request");
+          }
+
+          // 2. Calculate days and update leave balance
+          const days = calculateDuration(leaveRequest.startDate, leaveRequest.endDate);
+
+          // Check if userId exists
+          if (!leaveRequest.userId) {
+            throw new Error("Leave request has no associated user");
+          }
+
+          // 3. Update the leave balance
+          await updateLeaveBalance(leaveRequest.userId, leaveRequest.type, days);
+        });
+
+        // If we get here, transaction was successful
+      } catch (txError) {
+        console.error("Transaction failed:", txError);
+        return NextResponse.json(
+          { error: "Failed to approve leave request", details: (txError as Error).message },
+          { status: 500 },
+        );
+      }
+    } else {
+      // For non-approval actions, just update the status
+      updatedRequest = await db
+        .update(leaveRequests)
+        .set(updateData)
+        .where(eq(leaveRequests.id, leaveRequestId))
+        .returning();
+
+      if (!updatedRequest || updatedRequest.length === 0) {
+        return NextResponse.json({ error: "Leave request not found or no changes made" }, { status: 404 });
+      }
     }
 
-    // At this point, we could log to an audit trail table
-    // Example: await createAuditTrailEntry({
-    //   userId: managerId,
-    //   action: `Updated leave request ${leaveRequestId} status from ${currentLeaveRequest[0].status} to ${action}`,
-    //   entityType: 'leave_request',
-    //   entityId: leaveRequestId,
-    //   details: JSON.stringify({
-    //     previousStatus: currentLeaveRequest[0].status,
-    //     newStatus: action,
-    //     comments: managerComments?.trim() || null
-    //   })
-    // });
-
-    // If request was rejected, notify the employee
-    if (action === "rejected" && updatedRequest[0].userId) {
+    // Send notification email to employee
+    if (leaveRequest.userId) {
       try {
         // Get the employee details
-        const employee = await db.select().from(users).where(eq(users.id, updatedRequest[0].userId)).limit(1);
+        const employee = await db.select().from(users).where(eq(users.id, leaveRequest.userId)).limit(1);
 
         if (employee.length > 0 && employee[0].email) {
-          // Get manager name
-          let managerName = "Your manager";
+          // Get manager/approver name
+          let approverName = "Management";
           if (managerId) {
-            const manager = await db.select().from(users).where(eq(users.id, managerId)).limit(1);
+            const approver = await db.select().from(users).where(eq(users.id, managerId)).limit(1);
 
-            if (manager.length > 0) {
-              managerName = `${manager[0].firstName} ${manager[0].lastName}`;
+            if (approver.length > 0) {
+              approverName = `${approver[0].firstName} ${approver[0].lastName}`;
             }
           }
 
-          // Send notification email
-          await sendNotificationEmail(
-            employee[0].email,
-            "Your Leave Request Has Been Rejected",
-            `<p>Dear ${employee[0].firstName},</p>
-            <p>Your leave request for ${new Date(updatedRequest[0].startDate).toLocaleDateString()} to ${new Date(
-              updatedRequest[0].endDate,
-            ).toLocaleDateString()} has been rejected.</p>
-            <p><strong>Reason:</strong> ${managerComments || "No reason provided"}</p>
-            <p>If you have any questions, please contact ${managerName}.</p>
-            <p>Regards,<br/>HR Team</p>`,
-          );
+          // Determine email subject and message based on action
+          let subject = "";
+          let message = "";
+
+          switch (action) {
+            case "tm_approved":
+              subject = "Your Leave Request Has Been Approved";
+              message = `<p>Dear ${employee[0].firstName},</p>
+                <p>Your leave request for ${new Date(leaveRequest.startDate).toLocaleDateString()} to ${new Date(
+                leaveRequest.endDate,
+              ).toLocaleDateString()} has been approved.</p>
+                ${managerComments ? `<p><strong>Comments:</strong> ${managerComments}</p>` : ""}
+                <p>Regards,<br/>HR Team</p>`;
+              break;
+
+            case "tm_rejected":
+              subject = "Your Leave Request Has Been Rejected";
+              message = `<p>Dear ${employee[0].firstName},</p>
+                <p>Your leave request for ${new Date(leaveRequest.startDate).toLocaleDateString()} to ${new Date(
+                leaveRequest.endDate,
+              ).toLocaleDateString()} has been rejected by top management.</p>
+                <p><strong>Reason:</strong> ${managerComments || "No reason provided"}</p>
+                <p>If you have any questions, please contact your manager.</p>
+                <p>Regards,<br/>HR Team</p>`;
+              break;
+
+            case "tm_returned":
+              subject = "Your Leave Request Has Been Returned";
+              message = `<p>Dear ${employee[0].firstName},</p>
+                <p>Your leave request for ${new Date(leaveRequest.startDate).toLocaleDateString()} to ${new Date(
+                leaveRequest.endDate,
+              ).toLocaleDateString()} has been returned by top management for further review.</p>
+                <p><strong>Comments:</strong> ${managerComments || "No comments provided"}</p>
+                <p>Please discuss this with your manager.</p>
+                <p>Regards,<br/>HR Team</p>`;
+              break;
+
+            default:
+              // Don't send email for other statuses
+              break;
+          }
+
+          if (subject && message) {
+            await sendNotificationEmail(employee[0].email, subject, message);
+          }
         }
       } catch (emailError) {
         // Log the error but don't fail the request
@@ -156,7 +302,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
     }
 
-    return NextResponse.json(updatedRequest[0]);
+    // Return the updated request
+    return NextResponse.json({
+      success: true,
+      message: `Leave request ${action.replace("tm_", "").replace("_", " ")} successfully`,
+    });
   } catch (error) {
     console.error("Error updating leave request:", error);
     if (error instanceof z.ZodError) {
