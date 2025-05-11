@@ -118,7 +118,21 @@ async function updateLeaveBalance(userId: number, leaveType: string, days: numbe
 
     // Update used balance
     const updateData: Partial<typeof users.$inferInsert> = {};
-    updateData[mapping.usedField as keyof typeof updateData] = usedBalance + days;
+
+    // Create a type-safe way to update the field
+    if (mapping.usedField === "usedVacationLeave") {
+      updateData.usedVacationLeave = usedBalance + days;
+    } else if (mapping.usedField === "usedMandatoryLeave") {
+      updateData.usedMandatoryLeave = usedBalance + days;
+    } else if (mapping.usedField === "usedSickLeave") {
+      updateData.usedSickLeave = usedBalance + days;
+    } else if (mapping.usedField === "usedMaternityLeave") {
+      updateData.usedMaternityLeave = usedBalance + days;
+    } else if (mapping.usedField === "usedPaternityLeave") {
+      updateData.usedPaternityLeave = usedBalance + days;
+    } else if (mapping.usedField === "usedSpecialPrivilegeLeave") {
+      updateData.usedSpecialPrivilegeLeave = usedBalance + days;
+    }
 
     // Update the user record
     await db.update(users).set(updateData).where(eq(users.id, userId));
@@ -241,13 +255,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         if (employee.length > 0 && employee[0].email) {
           // Get manager/approver name
-          let approverName = "Management";
           if (managerId) {
-            const approver = await db.select().from(users).where(eq(users.id, managerId)).limit(1);
-
-            if (approver.length > 0) {
-              approverName = `${approver[0].firstName} ${approver[0].lastName}`;
-            }
+            // No need to fetch approver if we're not using it
           }
 
           // Determine email subject and message based on action

@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { parseLocalDate } from "@/lib/date-utils";
@@ -173,14 +172,6 @@ export default function PendingApprovals() {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
   };
-
-  // Loading skeleton
-  const renderLoadingSkeleton = () => (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-3/4" />
-      <Skeleton className="h-[400px] w-full" />
-    </div>
-  );
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">

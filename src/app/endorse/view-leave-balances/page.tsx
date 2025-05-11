@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/lib/hooks";
 import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 // TypeScript interfaces
 interface LeaveBalance {
@@ -19,14 +19,27 @@ interface LeaveBalance {
 
 interface Subordinate {
   id: number;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   department: string | null;
   sex: string;
+  vacationLeave?: number;
+  mandatoryLeave?: number;
+  sickLeave?: number;
+  maternityLeave?: number;
+  paternityLeave?: number;
+  specialPrivilegeLeave?: number;
+  usedVacationLeave?: number;
+  usedMandatoryLeave?: number;
+  usedSickLeave?: number;
+  usedMaternityLeave?: number;
+  usedPaternityLeave?: number;
+  usedSpecialPrivilegeLeave?: number;
   leaveBalances: LeaveBalance[];
 }
 
-export default function ViewLeaveBalances() {
+function ViewLeaveBalancesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("search") || "";
@@ -100,16 +113,29 @@ export default function ViewLeaveBalances() {
         const data = await response.json();
 
         // Process subordinates data
-        const processedSubordinates = data.map((sub: any) => {
+        const processedSubordinates = data.map((sub: Subordinate) => {
           // Filter leave balances based on gender
           const filteredBalances = processLeaveBalances(sub);
 
           return {
             id: sub.id,
-            fullName: `${sub.firstName} ${sub.lastName}`,
+            firstName: sub.firstName,
+            lastName: sub.lastName,
             email: sub.email,
             department: sub.department,
             sex: sub.sex,
+            vacationLeave: sub.vacationLeave,
+            mandatoryLeave: sub.mandatoryLeave,
+            sickLeave: sub.sickLeave,
+            maternityLeave: sub.maternityLeave,
+            paternityLeave: sub.paternityLeave,
+            specialPrivilegeLeave: sub.specialPrivilegeLeave,
+            usedVacationLeave: sub.usedVacationLeave,
+            usedMandatoryLeave: sub.usedMandatoryLeave,
+            usedSickLeave: sub.usedSickLeave,
+            usedMaternityLeave: sub.usedMaternityLeave,
+            usedPaternityLeave: sub.usedPaternityLeave,
+            usedSpecialPrivilegeLeave: sub.usedSpecialPrivilegeLeave,
             leaveBalances: filteredBalances,
           };
         });
@@ -140,7 +166,7 @@ export default function ViewLeaveBalances() {
   };
 
   // Process leave balances based on gender
-  const processLeaveBalances = (subordinate: any): LeaveBalance[] => {
+  const processLeaveBalances = (subordinate: Subordinate): LeaveBalance[] => {
     const balances: LeaveBalance[] = [];
 
     // Vacation Leave
@@ -285,7 +311,9 @@ export default function ViewLeaveBalances() {
                 key={subordinate.id}
                 className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-center">{subordinate.fullName}</CardTitle>
+                  <CardTitle className="text-center">
+                    {subordinate.firstName} {subordinate.lastName}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div>
@@ -316,8 +344,16 @@ export default function ViewLeaveBalances() {
           </div>
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-600">No subordinates found matching '{searchTerm}'</div>
+        <div className="text-center py-8 text-gray-600">No subordinates found matching &apos;{searchTerm}&apos;</div>
       )}
     </div>
+  );
+}
+
+export default function ViewLeaveBalances() {
+  return (
+    <Suspense fallback={<div className="max-w-4xl mx-auto p-6">Loading...</div>}>
+      <ViewLeaveBalancesContent />
+    </Suspense>
   );
 }

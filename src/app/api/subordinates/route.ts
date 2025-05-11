@@ -1,7 +1,7 @@
 import db from "@/db";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/session";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, ne, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -35,29 +35,24 @@ export async function GET(request: NextRequest) {
     // Get search params from URL
     const searchQuery = request.nextUrl.searchParams.get("search") || "";
 
-    // Base query: Get users from the same department as the manager
-    let query = and(
-      eq(users.department, manager.department), // Same department as manager
-      users.id !== manager.id, // Exclude the manager
-    );
+    // Create an array of conditions
+    const conditions = [];
 
-    // For super admins, don't filter by department
-    if (manager.role === "Super Admin") {
-      query = users.id !== manager.id; // Only exclude the manager
+    // Always exclude the manager from results
+    conditions.push(ne(users.id, manager.id));
+
+    // For managers, filter by department if it exists
+    if (manager.role !== "Super Admin" && manager.department) {
+      conditions.push(eq(users.department, manager.department));
     }
 
     // Add search filter if search query exists
     if (searchQuery) {
-      query = and(
-        query,
-        or(
-          ilike(users.firstName, `%${searchQuery}%`),
-          ilike(users.lastName, `%${searchQuery}%`),
-          // Convert ID to string for search comparison
-          ilike(users.id.toString(), `%${searchQuery}%`),
-        ),
-      );
+      conditions.push(or(ilike(users.firstName, `%${searchQuery}%`), ilike(users.lastName, `%${searchQuery}%`)));
     }
+
+    // Combine all conditions with AND
+    const finalQuery = conditions.length > 1 ? and(...conditions) : conditions[0]; // If only one condition, use it directly
 
     // Execute query
     const subordinates = await db
@@ -82,7 +77,7 @@ export async function GET(request: NextRequest) {
         usedSpecialPrivilegeLeave: users.usedSpecialPrivilegeLeave,
       })
       .from(users)
-      .where(query)
+      .where(finalQuery)
       .orderBy(users.firstName, users.lastName);
 
     return NextResponse.json(subordinates);

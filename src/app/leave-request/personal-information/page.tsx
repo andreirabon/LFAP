@@ -46,7 +46,7 @@ interface UserLeaveHistory {
   startDate: string;
   endDate: string;
   numberOfDays: number;
-  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
   createdAt: string;
 }
 

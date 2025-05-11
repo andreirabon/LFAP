@@ -174,7 +174,7 @@ export default function ApprovedApprovals() {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">Endorsed Leave Requests</h1>
+      <h1 className="text-2xl font-bold mb-6">Top Management Approved Leave Requests</h1>
 
       <div className="rounded-lg border">
         <table className="w-full">
