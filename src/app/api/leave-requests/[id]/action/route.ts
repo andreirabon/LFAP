@@ -1,7 +1,7 @@
 import db from "@/db";
 import { leaveRequests, users } from "@/db/schema";
+import { NextResponse, RouteHandlerParams } from "@/lib/route-types";
 import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 
 // Helper function to send notification email (implementation would depend on your email service)
@@ -163,11 +163,9 @@ function calculateDuration(startDate: Date, endDate: Date): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
 }
 
-// Update the type definition to match Next.js's expectations
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  // Await the params object before accessing its properties
-  const { id } = await params;
-  const leaveRequestId = parseInt(id, 10);
+// Use the standard Next.js type for PATCH route handler
+export async function PATCH(request: Request, context: RouteHandlerParams<{ id: string }>): Promise<Response> {
+  const leaveRequestId = parseInt(context.params.id, 10);
 
   if (isNaN(leaveRequestId)) {
     return NextResponse.json({ error: "Invalid leave request ID" }, { status: 400 });

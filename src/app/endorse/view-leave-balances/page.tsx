@@ -144,7 +144,7 @@ function ViewLeaveBalancesContent() {
 
           data = await response.json();
           console.log("API response successful");
-        } catch (endpointError: any) {
+        } catch (endpointError: Error) {
           // If the specialized endpoint fails, fall back to the original
           console.warn("Specialized endpoint failed:", endpointError.message);
           console.log("Falling back to original endpoint");
@@ -245,7 +245,7 @@ function ViewLeaveBalancesContent() {
         if (usedFallback) {
           console.log("Note: Used fallback endpoint with client-side filtering");
         }
-      } catch (error: any) {
+      } catch (error: Error) {
         console.error("Error fetching subordinates:", error);
         setError(`Failed to load subordinates: ${error.message || "Unknown error"}`);
       } finally {

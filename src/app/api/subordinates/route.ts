@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Create base query conditions
-    let queryConditions = [];
+    const queryConditions = [];
 
     // Always exclude the current user from results
     queryConditions.push(ne(users.id, manager.id));

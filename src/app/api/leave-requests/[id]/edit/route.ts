@@ -1,9 +1,9 @@
 import db from "@/db";
 import { leaveRequests } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { NextResponse, RouteHandlerParams } from "@/lib/route-types";
 import { getSession } from "@/lib/session";
 import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 
 // Validation schema
@@ -15,7 +15,8 @@ const editLeaveRequestSchema = z.object({
   supportingDoc: z.string().optional(),
 });
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+// Correctly typed PUT handler
+export async function PUT(request: Request, context: RouteHandlerParams<{ id: string }>): Promise<Response> {
   try {
     const session = await getSession();
     if (!session.isLoggedIn) {
@@ -29,7 +30,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const leaveRequestId = parseInt(params.id, 10);
+    const leaveRequestId = parseInt(context.params.id, 10);
     if (isNaN(leaveRequestId)) {
       return NextResponse.json({ error: "Invalid leave request ID" }, { status: 400 });
     }

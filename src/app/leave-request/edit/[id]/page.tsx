@@ -257,7 +257,7 @@ export default function EditLeaveRequest() {
           <CardHeader className="bg-muted/30">
             <CardTitle className="text-2xl font-bold text-primary">Leave Request Not Found</CardTitle>
             <CardDescription className="text-muted-foreground">
-              The leave request you are trying to edit does not exist or you don't have permission to edit it.
+              The leave request you are trying to edit does not exist or you don&apos;t have permission to edit it.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6 px-6 sm:px-8">
