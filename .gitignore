@@ -124,3 +124,60 @@ src/db/*
 *.bak
 *.backup
 *~
+
+# Drizzle
+/drizzle
+.drizzle/
+
+# Uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+/uploads
+/tmp
+
+# Next.js Analyzer
+/analyze
+analyze/
+
+# Next.js export
+/export
+export/
+
+# Turbopack
+.turbo-dev/
+
+# Coverage directories
+/.nyc_output
+
+# Sentry Auth Token
+.sentryclirc
+
+# PWA related
+**/public/precache.*.*.js
+**/public/sw.js.map
+**/public/workbox-*.js.map
+**/public/worker-*.js.map
+**/public/fallback-*.js.map
+**/public/precache-manifest.*.js.map
+
+# Next-PWA
+/public/workbox-*
+/public/worker-*
+/public/sw.js.map
+/public/workbox-*.js.map
+/public/worker-*.js.map
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/e2e/.auth/
+
+# Vitest
+/coverage-ts
+
+# Additional common ignores
+.env.*.local
+/node_modules*/
+/_site/
+.docz

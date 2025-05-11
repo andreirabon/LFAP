@@ -186,13 +186,13 @@ export default function FileLeave() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>File Leave Request</CardTitle>
-          <CardDescription>Submit a new leave request for approval</CardDescription>
+    <div className="container max-w-4xl mx-auto py-10 px-4 sm:px-6">
+      <Card className="shadow-md border-muted">
+        <CardHeader className="bg-muted/30">
+          <CardTitle className="text-2xl font-bold text-primary">File Leave Request</CardTitle>
+          <CardDescription className="text-muted-foreground">Submit a new leave request for approval</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6 px-6 sm:px-8">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
@@ -203,13 +203,13 @@ export default function FileLeave() {
                 name="leaveType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Leave Type</FormLabel>
+                    <FormLabel className="text-base font-medium">Leave Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       disabled={isLoadingBalances}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11">
                           <SelectValue
                             placeholder={isLoadingBalances ? "Loading leave balances..." : "Select leave type"}
                           />
@@ -245,17 +245,17 @@ export default function FileLeave() {
 
               {/* Show selected leave information if available */}
               {selectedBalance && (
-                <div className="rounded-md bg-muted p-3 text-sm">
-                  <p>
+                <div className="rounded-md bg-muted/50 p-4 text-sm border border-muted mb-6">
+                  <p className="mb-1">
                     <span className="font-medium">Selected Leave:</span> {selectedBalance.type}
                   </p>
-                  <p>
+                  <p className="mb-1">
                     <span className="font-medium">Total Days:</span> {selectedBalance.total}
                   </p>
-                  <p>
+                  <p className="mb-1">
                     <span className="font-medium">Used Days:</span> {selectedBalance.used}
                   </p>
-                  <p>
+                  <p className="mb-1">
                     <span className="font-medium">Remaining Days:</span> {selectedBalance.remaining}
                   </p>
                 </div>
@@ -267,14 +267,14 @@ export default function FileLeave() {
                 name="dateRange"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Leave Duration</FormLabel>
+                    <FormLabel className="text-base font-medium">Leave Duration</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full h-11 pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground",
                             )}>
                             {field.value?.from ? (
@@ -303,6 +303,7 @@ export default function FileLeave() {
                           disabled={isDateDisabled}
                           numberOfMonths={2}
                           initialFocus
+                          className="rounded-md border shadow-sm"
                         />
                       </PopoverContent>
                     </Popover>
@@ -317,11 +318,11 @@ export default function FileLeave() {
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reason for Leave</FormLabel>
+                    <FormLabel className="text-base font-medium">Reason for Leave</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Please provide a detailed reason for your leave request"
-                        className="resize-none"
+                        className="resize-none min-h-[120px] shadow-sm"
                         {...field}
                       />
                     </FormControl>
@@ -336,7 +337,7 @@ export default function FileLeave() {
                 name="supportingDocs"
                 render={({ field: { onChange, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Supporting Documents</FormLabel>
+                    <FormLabel className="text-base font-medium">Supporting Documents</FormLabel>
                     <FormControl>
                       <Input
                         type="file"
@@ -348,6 +349,7 @@ export default function FileLeave() {
                         }}
                         {...field}
                         value={undefined}
+                        className="h-11 shadow-sm"
                       />
                     </FormControl>
                     <FormDescription>Upload any supporting documents (optional)</FormDescription>
@@ -359,8 +361,9 @@ export default function FileLeave() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto h-11 px-8 text-base font-medium bg-green-600 hover:bg-green-700 text-white transition-colors duration-200">
+                {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                 Submit Leave Request
               </Button>
             </form>

@@ -1,9 +1,11 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import db from "@/db"; // Assuming your Drizzle instance is exported from @/db
 import { leaveRequests, users } from "@/db/schema"; // Assuming your schema is here
 import { getSession } from "@/lib/session";
 import { and, eq } from "drizzle-orm";
+import { Briefcase, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -16,7 +18,7 @@ function calculateNumberOfDays(startDate: Date, endDate: Date): number {
   return diffDays === 0 ? 1 : diffDays; // If start and end are same, it's 1 day
 }
 
-// Helper function to format date (can be kept or modified)
+// Helper function to format date
 function formatDate(dateString: string | Date) {
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
@@ -27,30 +29,45 @@ function formatDate(dateString: string | Date) {
 
 interface UserPersonalInfo {
   name: string;
-  // employeeId?: string; // Not in schema
-  // department?: string; // Not in schema
-  // position?: string; // Not in schema
   dateHired: string;
   email: string;
-  // supervisor?: string; // Not in schema
 }
 
 interface UserLeaveEntitlement {
   type: string;
   balance: number;
-  color: string; // Keep color for styling, or adjust as needed
+  unit: "days";
+  color: string;
 }
 
 interface UserLeaveHistory {
-  id: number; // Assuming ID is number from DB
+  id: number;
   type: string;
   startDate: string;
   endDate: string;
   numberOfDays: number;
-  status: "pending" | "endorsed" | "rejected" | "returned" | "approved"; // Match the schema enum
-  // approvedBy?: string; // Not in schema
-  // approvedDate?: string; // Not in schema
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
   createdAt: string;
+}
+
+// Get background color for leave type badge
+function getBadgeColor(leaveType: string): string {
+  switch (leaveType) {
+    case "Vacation Leave":
+      return "bg-blue-100 text-blue-800 hover:bg-blue-100";
+    case "Sick Leave":
+      return "bg-red-100 text-red-800 hover:bg-red-100";
+    case "Mandatory/Forced Leave":
+      return "bg-purple-100 text-purple-800 hover:bg-purple-100";
+    case "Special Privilege Leave":
+      return "bg-green-100 text-green-800 hover:bg-green-100";
+    case "Maternity Leave":
+      return "bg-pink-100 text-pink-800 hover:bg-pink-100";
+    case "Paternity Leave":
+      return "bg-orange-100 text-orange-800 hover:bg-orange-100";
+    default:
+      return "bg-gray-100 text-gray-800 hover:bg-gray-100";
+  }
 }
 
 async function UserDataFetcher({ userId }: { userId: number }) {
@@ -67,6 +84,7 @@ async function UserDataFetcher({ userId }: { userId: number }) {
       maternityLeave: users.maternityLeave,
       paternityLeave: users.paternityLeave,
       specialPrivilegeLeave: users.specialPrivilegeLeave,
+      sex: users.sex, // Add sex to determine gender-specific leaves
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -80,18 +98,32 @@ async function UserDataFetcher({ userId }: { userId: number }) {
   const personalInfo: UserPersonalInfo = {
     name: `${dbUser.firstName} ${dbUser.lastName}`,
     email: dbUser.email,
-    dateHired: formatDate(dbUser.createdAt!), // Add null check if createdAt can be null
+    dateHired: formatDate(dbUser.createdAt!),
   };
 
   const leaveEntitlements: UserLeaveEntitlement[] = [
-    { type: "Vacation Leave", balance: dbUser.vacationLeave, color: "text-blue-600" },
-    { type: "Mandatory/Forced Leave", balance: dbUser.mandatoryLeave, color: "text-purple-600" },
-    { type: "Sick Leave", balance: dbUser.sickLeave, color: "text-red-600" },
-    { type: "Maternity Leave", balance: dbUser.maternityLeave, color: "text-pink-600" },
-    // Assuming Paternity leave also needs to be displayed
-    { type: "Paternity Leave", balance: dbUser.paternityLeave, color: "text-teal-600" },
-    { type: "Special Privilege Leave", balance: dbUser.specialPrivilegeLeave, color: "text-green-600" },
+    { type: "Vacation Leave", balance: dbUser.vacationLeave, unit: "days", color: "text-blue-600" },
+    { type: "Mandatory/Forced Leave", balance: dbUser.mandatoryLeave, unit: "days", color: "text-purple-600" },
+    { type: "Sick Leave", balance: dbUser.sickLeave, unit: "days", color: "text-red-600" },
+    { type: "Special Privilege Leave", balance: dbUser.specialPrivilegeLeave, unit: "days", color: "text-green-600" },
   ];
+
+  // Add gender-specific leave types
+  if (dbUser.sex === "Female") {
+    leaveEntitlements.push({
+      type: "Maternity Leave",
+      balance: dbUser.maternityLeave,
+      unit: "days",
+      color: "text-pink-600",
+    });
+  } else if (dbUser.sex === "Male") {
+    leaveEntitlements.push({
+      type: "Paternity Leave",
+      balance: dbUser.paternityLeave,
+      unit: "days",
+      color: "text-orange-600",
+    });
+  }
 
   // Fetch Approved Leave History
   const approvedLeavesResult = await db
@@ -105,7 +137,7 @@ async function UserDataFetcher({ userId }: { userId: number }) {
     })
     .from(leaveRequests)
     .where(and(eq(leaveRequests.userId, userId), eq(leaveRequests.status, "approved")))
-    .orderBy(leaveRequests.createdAt); // Or sort by startDate
+    .orderBy(leaveRequests.createdAt);
 
   const leaveHistory: UserLeaveHistory[] = approvedLeavesResult.map((leave) => ({
     id: leave.id,
@@ -121,43 +153,22 @@ async function UserDataFetcher({ userId }: { userId: number }) {
     <>
       {/* Personal Information Card */}
       <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-        </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Name</p>
-              <p className="font-medium">{personalInfo.name}</p>
+          <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center text-sm text-gray-600">
+                <User className="h-4 w-4 mr-2" />
+                <span>
+                  <b>Name:</b> {personalInfo.name}
+                </span>
+              </div>
+              <div className="flex items-center text-sm text-gray-600">
+                <Briefcase className="h-4 w-4 mr-2" />
+                <span>
+                  <b>Date Hired:</b> {personalInfo.dateHired}
+                </span>
+              </div>
             </div>
-            {/* Fields not in schema are commented out or removed
-            <div>
-              <p className="text-sm text-muted-foreground">Employee ID</p>
-              <p className="font-medium">{personalInfo.employeeId}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Department</p>
-              <p className="font-medium">{personalInfo.department}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Position</p>
-              <p className="font-medium">{personalInfo.position}</p>
-            </div>
-            */}
-            <div>
-              <p className="text-sm text-muted-foreground">Date Hired</p>
-              <p className="font-medium">{personalInfo.dateHired}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium">{personalInfo.email}</p>
-            </div>
-            {/*
-            <div>
-              <p className="text-sm text-muted-foreground">Supervisor</p>
-              <p className="font-medium">{personalInfo.supervisor}</p>
-            </div>
-            */}
           </div>
         </CardContent>
       </Card>
@@ -168,13 +179,18 @@ async function UserDataFetcher({ userId }: { userId: number }) {
           <CardTitle>Leave Entitlements</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-wrap gap-3">
             {leaveEntitlements.map((entitlement) => (
               <div
                 key={entitlement.type}
-                className="flex justify-between items-center p-3 rounded-lg border">
-                <span className={`font-medium ${entitlement.color}`}>{entitlement.type}</span>
-                <span className={`font-semibold ${entitlement.color}`}>{entitlement.balance}</span>
+                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <Badge
+                  variant="secondary"
+                  className={`mb-1 font-normal ${getBadgeColor(entitlement.type)}`}>
+                  {entitlement.type}
+                </Badge>
+                <span className="text-xl font-semibold">{entitlement.balance}</span>
+                <span className="text-xs text-gray-500">{entitlement.unit}</span>
               </div>
             ))}
           </div>
@@ -196,15 +212,20 @@ async function UserDataFetcher({ userId }: { userId: number }) {
                   <TableHead>Period</TableHead>
                   <TableHead>Days</TableHead>
                   <TableHead>Status</TableHead>
-                  {/* <TableHead>Approved By</TableHead> // Not in schema */}
-                  <TableHead>Requested Date</TableHead> {/* Changed from Approved Date */}
+                  <TableHead>Requested Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {leaveHistory.map((leave) => (
                   <TableRow key={leave.id}>
                     <TableCell className="font-medium">{leave.id}</TableCell>
-                    <TableCell>{leave.type}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={getBadgeColor(leave.type)}>
+                        {leave.type}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {leave.startDate} - {leave.endDate}
                     </TableCell>
@@ -216,19 +237,22 @@ async function UserDataFetcher({ userId }: { userId: number }) {
                             ? "bg-green-100 text-green-800"
                             : leave.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800" // For rejected, though query filters for approved
+                            : leave.status === "endorsed"
+                            ? "bg-blue-100 text-blue-800"
+                            : leave.status === "returned"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-red-100 text-red-800"
                         }`}>
                         {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
                       </span>
                     </TableCell>
-                    {/* <TableCell>{leave.approvedBy}</TableCell> // Not in schema */}
-                    <TableCell>{leave.createdAt}</TableCell> {/* Using createdAt from leave_requests */}
+                    <TableCell>{leave.createdAt}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           ) : (
-            <p>No approved leave history found.</p>
+            <p className="text-center py-4 text-gray-600">No approved leave history found.</p>
           )}
         </CardContent>
       </Card>
@@ -237,27 +261,29 @@ async function UserDataFetcher({ userId }: { userId: number }) {
 }
 
 export default async function PersonalInformationPage() {
-  // Renamed to avoid conflict
   const session = await getSession();
 
   if (!session.isLoggedIn || !session.userId) {
-    // Ensure userId exists
     redirect("/login");
   }
 
-  // It's good practice to parse userId to number if it's stored as string in session
   const userId = typeof session.userId === "string" ? parseInt(session.userId, 10) : session.userId;
 
   if (isNaN(userId)) {
-    // Handle cases where userId might not be a valid number after parsing
-    // This could be logging an error, redirecting, or showing an error message
     console.error("Invalid userId in session:", session.userId);
-    redirect("/login"); // Or an error page
+    redirect("/login");
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Suspense fallback={<p className="text-center">Loading personal information...</p>}>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold mb-6">Personal Information </h1>
+      <Suspense
+        fallback={
+          <div className="text-center py-8">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+            <p className="mt-2 text-gray-600">Loading personal information...</p>
+          </div>
+        }>
         <UserDataFetcher userId={userId} />
       </Suspense>
     </div>
