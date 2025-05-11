@@ -1,14 +1,15 @@
 import db from "@/db";
 import { leaveRequests } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { parseLocalDate } from "@/lib/date-utils";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 // Validation schema for the request body
 const leaveRequestSchema = z.object({
   leaveType: z.string(),
-  startDate: z.string().transform((date) => new Date(date)),
-  endDate: z.string().transform((date) => new Date(date)),
+  startDate: z.string().transform((date) => parseLocalDate(date)),
+  endDate: z.string().transform((date) => parseLocalDate(date)),
   reason: z.string().min(10).max(500),
   supportingDoc: z.string().optional(),
 });
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
         reason: validatedData.reason,
         supportingDoc: validatedData.supportingDoc,
         status: "pending", // Default status for new requests
+        createdAt: parseLocalDate(new Date().toISOString()),
       })
       .returning();
 

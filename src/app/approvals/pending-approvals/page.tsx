@@ -1,393 +1,268 @@
 "use client";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, X } from "lucide-react";
+import { parseLocalDate } from "@/lib/date-utils";
+import { X } from "lucide-react";
 import { DateTime } from "luxon";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-interface LeaveBalance {
-  annual: number;
-  sick: number;
-  unpaid: number;
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string | null;
 }
 
-interface StatusUpdate {
-  status: string;
-  updatedBy: string;
-  updatedAt: Date;
-  comments?: string;
-}
-
-interface LeaveRequest {
-  id: string;
-  employeeName: string;
-  employeeId: string;
+interface EndorsedRequest {
+  id: number;
+  type: string;
   startDate: Date;
   endDate: Date;
-  duration: number;
-  leaveType: "Annual" | "Sick" | "Unpaid";
+  status: string;
   reason: string;
-  status: "Endorsed" | "Approved" | "Rejected";
-  leaveBalance: LeaveBalance;
-  statusTrail: StatusUpdate[];
+  supportingDoc: string | null;
+  managerComments: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  user: User;
+  managerId: number | null;
+  manager?: {
+    firstName: string;
+    lastName: string;
+  };
 }
 
-// Sample data
-const sampleLeaveRequests: LeaveRequest[] = [
-  {
-    id: "LR001",
-    employeeName: "John Doe",
-    employeeId: "EMP001",
-    startDate: new Date("2024-03-20"),
-    endDate: new Date("2024-03-25"),
-    duration: 5,
-    leaveType: "Annual",
-    reason: "Family vacation",
-    status: "Endorsed",
-    leaveBalance: {
-      annual: 15,
-      sick: 10,
-      unpaid: 0,
-    },
-    statusTrail: [
-      {
-        status: "Submitted",
-        updatedBy: "John Doe",
-        updatedAt: new Date("2024-03-10"),
-      },
-      {
-        status: "Endorsed",
-        updatedBy: "Jane Smith (Manager)",
-        updatedAt: new Date("2024-03-12"),
-        comments: "Employee has sufficient leave balance",
-      },
-    ],
-  },
-  {
-    id: "LR002",
-    employeeName: "Alice Johnson",
-    employeeId: "EMP002",
-    startDate: new Date("2024-04-01"),
-    endDate: new Date("2024-04-03"),
-    duration: 3,
-    leaveType: "Sick",
-    reason: "Medical appointment and recovery",
-    status: "Endorsed",
-    leaveBalance: {
-      annual: 12,
-      sick: 8,
-      unpaid: 0,
-    },
-    statusTrail: [
-      {
-        status: "Submitted",
-        updatedBy: "Alice Johnson",
-        updatedAt: new Date("2024-03-15"),
-      },
-      {
-        status: "Endorsed",
-        updatedBy: "Bob Wilson (Manager)",
-        updatedAt: new Date("2024-03-16"),
-        comments: "Medical certificate provided",
-      },
-    ],
-  },
-];
-
-type ActionStatus = "Approved" | "Rejected";
-
 export default function PendingApprovals() {
-  const [requests, setRequests] = useState<LeaveRequest[]>(sampleLeaveRequests);
-  const [filteredRequests, setFilteredRequests] = useState<LeaveRequest[]>(sampleLeaveRequests);
-  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
-  const [comments, setComments] = useState("");
-  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const router = useRouter();
+  const [endorsedRequests, setEndorsedRequests] = useState<EndorsedRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<EndorsedRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingAction, setPendingAction] = useState<ActionStatus | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [managementComments, setManagementComments] = useState("");
+  const [isCommentsError, setIsCommentsError] = useState(false);
 
+  // Fetch endorsed leave requests when component mounts
   useEffect(() => {
-    // Check authentication status
-    const checkAuth = async () => {
-      setIsLoading(true);
-      setError(null);
+    const fetchEndorsedRequests = async () => {
       try {
-        const response = await fetch("/api/auth/session");
+        const response = await fetch("/api/leave-requests/endorsed");
         if (!response.ok) {
-          throw new Error("Failed to fetch session");
+          throw new Error("Failed to fetch endorsed requests");
         }
         const data = await response.json();
-        if (!data.isLoggedIn) {
-          router.replace("/login");
-          return; // Exit early if not logged in
-        }
-
-        // In a real app, you would fetch data from your API here
-        // For now, we'll just use the sample data
-        setRequests(sampleLeaveRequests);
-        setFilteredRequests(sampleLeaveRequests);
+        setEndorsedRequests(data);
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error checking auth:", error);
-        setError(error instanceof Error ? error.message : "An unexpected error occurred");
-        toast.error("Failed to load data. Please try refreshing the page.");
-      } finally {
+        console.error("Error fetching endorsed leave requests:", error);
+        toast.error("Failed to load endorsed leave requests");
         setIsLoading(false);
       }
     };
 
-    checkAuth();
-  }, [router]);
+    fetchEndorsedRequests();
+  }, []);
 
-  // Filter requests when search term changes
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredRequests(requests);
-      return;
-    }
-
-    const lowercasedSearch = searchTerm.toLowerCase();
-    const filtered = requests.filter(
-      (request) =>
-        request.employeeName.toLowerCase().includes(lowercasedSearch) ||
-        request.leaveType.toLowerCase().includes(lowercasedSearch) ||
-        request.employeeId.toLowerCase().includes(lowercasedSearch),
-    );
-
-    setFilteredRequests(filtered);
-  }, [searchTerm, requests]);
-
-  const handleRequestSelect = (request: LeaveRequest) => {
+  const handleSelectRequest = (request: EndorsedRequest) => {
     setSelectedRequest(request);
-    setComments("");
-    setCommentsError(null);
+    setManagementComments("");
+    setIsCommentsError(false);
   };
 
-  // Validate comments based on action type
-  const validateComments = (action: ActionStatus, comments: string): boolean => {
-    if (action === "Rejected" && !comments.trim()) {
-      setCommentsError("Comments are required to reject a request");
+  const handleCloseDetails = () => {
+    setSelectedRequest(null);
+    setManagementComments("");
+    setIsCommentsError(false);
+  };
+
+  const validateComments = (action: "approved" | "rejected" | "returned") => {
+    if (action === "rejected" && (!managementComments || managementComments.trim().length < 10)) {
+      setIsCommentsError(true);
+      toast.error("Comments are required when rejecting a request (minimum 10 characters)");
       return false;
     }
-
-    if (action === "Rejected" && comments.trim().length < 10) {
-      setCommentsError("Comments must be at least 10 characters long when rejecting a request");
-      return false;
-    }
-
-    setCommentsError(null);
+    // Comments are optional for 'approved' and 'returned' actions
+    setIsCommentsError(false);
     return true;
   };
 
-  const handleActionClick = (action: ActionStatus) => {
-    if (action === "Rejected") {
-      // Pre-validate comments before showing confirmation dialog
-      if (!validateComments(action, comments)) {
+  const handleAction = async (action: "approved" | "rejected" | "returned") => {
+    if (!selectedRequest) return;
+
+    if (!validateComments(action)) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Get the current user's session
+      const sessionResponse = await fetch("/api/auth/session");
+      if (!sessionResponse.ok) {
+        throw new Error("Failed to get user session");
+      }
+
+      const sessionData = await sessionResponse.json();
+
+      // Check if user is logged in
+      if (!sessionData.isLoggedIn) {
+        toast.error("Your session has expired. Please log in again.");
+        router.push("/login");
         return;
       }
-    }
 
-    setPendingAction(action);
-    setShowConfirmDialog(true);
-  };
+      const managerId = sessionData.userId;
 
-  const confirmAction = () => {
-    if (pendingAction) {
-      handleAction(selectedRequest?.id || "", pendingAction);
-      setPendingAction(null);
-      setShowConfirmDialog(false);
-    }
-  };
+      if (!managerId) {
+        toast.error("Could not determine your user ID. Please refresh and try again.");
+        return;
+      }
 
-  const cancelAction = () => {
-    setPendingAction(null);
-    setShowConfirmDialog(false);
-  };
+      const requestBody = {
+        action,
+        managerId,
+        managerComments: managementComments.trim() || undefined,
+      };
 
-  const handleAction = (requestId: string, action: ActionStatus) => {
-    setIsProcessing(true);
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        setRequests((prevRequests) =>
-          prevRequests.map((request) =>
-            request.id === requestId
-              ? {
-                  ...request,
-                  status: action,
-                  statusTrail: [
-                    ...request.statusTrail,
-                    {
-                      status: action,
-                      updatedBy: "Top Management",
-                      updatedAt: new Date(),
-                      comments: comments || `Leave request ${action.toLowerCase()} by top management`,
-                    },
-                  ],
-                }
-              : request,
-          ),
-        );
+      const response = await fetch(`/api/leave-requests/${selectedRequest.id}/action`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-        // Update filtered requests
-        setFilteredRequests((prevRequests) => prevRequests.filter((req) => req.id !== requestId));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to process leave request");
+      }
 
-        setSelectedRequest(null);
-        setComments("");
-        toast.success(`Request successfully ${action.toLowerCase()}.`);
-        setIsProcessing(false);
-      }, 500);
+      // Update the UI - remove the processed request from the list
+      setEndorsedRequests(endorsedRequests.filter((req) => req.id !== selectedRequest.id));
+      setSelectedRequest(null);
+
+      // Show success message
+      let actionMessage = "";
+      switch (action) {
+        case "approved":
+          actionMessage = "approved";
+          break;
+        case "rejected":
+          actionMessage = "rejected";
+          break;
+        case "returned":
+          actionMessage = "returned to manager";
+          break;
+      }
+      toast.success(`Leave request ${actionMessage} successfully`);
     } catch (error) {
-      console.error(`Error during ${action} action:`, error);
-      toast.error(
-        error instanceof Error ? error.message : "An unexpected error occurred while processing the request.",
-      );
+      console.error(`Error ${action} leave request:`, error);
+      toast.error(`Failed to ${action} leave request. Please try again.`);
+    } finally {
       setIsProcessing(false);
     }
   };
 
-  const getStatusColor = (status: LeaveRequest["status"]) => {
-    const colors = {
-      Endorsed: "bg-yellow-100 text-yellow-800",
-      Approved: "bg-green-100 text-green-800",
-      Rejected: "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800"; // Default/fallback color
+  // Function to calculate duration in days
+  const calculateDuration = (startDate: Date, endDate: Date) => {
+    const start = parseLocalDate(startDate.toString());
+    const end = parseLocalDate(endDate.toString());
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
   };
 
+  // Loading skeleton
   const renderLoadingSkeleton = () => (
-    <div className="container mx-auto py-8 px-4 space-y-6">
-      <Skeleton className="h-10 w-64 mb-6" />
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-3/4" />
+      <Skeleton className="h-[400px] w-full" />
     </div>
   );
-
-  if (isLoading) {
-    return renderLoadingSkeleton();
-  }
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">
       <h1 className="text-2xl font-bold">Pending Leave Approvals</h1>
 
-      {error && (
-        <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4 flex items-center justify-between">
-          <span>{error}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setError(null)}>
-            Dismiss
-          </Button>
-        </div>
-      )}
-
-      {/* Search and Filter */}
-      <div className="relative my-4">
-        <Search
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <Input
-          placeholder="Search by employee name, ID, or leave type..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 pr-4 py-2"
-        />
-      </div>
-
-      {/* Pending Requests List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Leave Approvals ({filteredRequests.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "No matching requests found" : "No pending requests at this time"}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee Name</TableHead>
-                  <TableHead>Leave Type</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
+      {/* Main Table */}
+      <Card className="overflow-hidden border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-24 text-center">
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                    <span className="ml-2">Loading...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : endorsedRequests.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-24 text-center text-muted-foreground">
+                  No endorsed leave requests found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              endorsedRequests.map((request) => (
+                <TableRow
+                  key={request.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSelectRequest(request)}>
+                  <TableCell className="font-medium">
+                    {request.user.firstName} {request.user.lastName}
+                  </TableCell>
+                  <TableCell>{request.type}</TableCell>
+                  <TableCell>{request.user.department || "N/A"}</TableCell>
+                  <TableCell>
+                    {DateTime.fromJSDate(parseLocalDate(request.startDate.toString()))
+                      .setZone("Asia/Manila")
+                      .toFormat("MMM dd, yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    {DateTime.fromJSDate(parseLocalDate(request.endDate.toString()))
+                      .setZone("Asia/Manila")
+                      .toFormat("MMM dd, yyyy")}
+                  </TableCell>
+                  <TableCell>{calculateDuration(request.startDate, request.endDate)} days</TableCell>
+                  <TableCell>
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Pending Approval</Badge>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => (
-                  <TableRow
-                    key={request.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      selectedRequest?.id === request.id ? "bg-muted" : ""
-                    }`}
-                    onClick={() => handleRequestSelect(request)}>
-                    <TableCell className="font-medium">{request.employeeName}</TableCell>
-                    <TableCell>{request.leaveType}</TableCell>
-                    <TableCell>{DateTime.fromJSDate(request.startDate).toFormat("dd LLL yyyy")}</TableCell>
-                    <TableCell>{DateTime.fromJSDate(request.endDate).toFormat("dd LLL yyyy")}</TableCell>
-                    <TableCell>{request.duration} days</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getStatusColor(request.status)}>
-                        {request.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </Card>
 
-      {/* Selected Request Details */}
+      {/* Request Details Section */}
       {selectedRequest && (
         <Card className="mx-auto max-w-4xl">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Leave Request Details</CardTitle>
+            <CardTitle>Request Details</CardTitle>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setSelectedRequest(null)}
+              onClick={handleCloseDetails}
               aria-label="Close details">
               <X className="h-4 w-4" />
             </Button>
@@ -398,20 +273,28 @@ export default function PendingApprovals() {
                 <div>
                   <h4 className="text-sm font-semibold">Employee Information</h4>
                   <p className="text-sm">
-                    Name: {selectedRequest.employeeName}
+                    Name: {selectedRequest.user.firstName} {selectedRequest.user.lastName}
                     <br />
-                    ID: {selectedRequest.employeeId}
+                    ID: {selectedRequest.user.id}
+                    <br />
+                    Department: {selectedRequest.user.department || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">Leave Details</h4>
+                  <h4 className="text-sm font-semibold">Leave Information</h4>
                   <p className="text-sm">
-                    Type: {selectedRequest.leaveType}
+                    Type: {selectedRequest.type}
                     <br />
-                    Duration: {DateTime.fromJSDate(selectedRequest.startDate).toFormat("dd LLL yyyy")} -{" "}
-                    {DateTime.fromJSDate(selectedRequest.endDate).toFormat("dd LLL yyyy")}
+                    Duration:{" "}
+                    {DateTime.fromJSDate(parseLocalDate(selectedRequest.startDate.toString()))
+                      .setZone("Asia/Manila")
+                      .toFormat("MMM dd, yyyy")}{" "}
+                    -{" "}
+                    {DateTime.fromJSDate(parseLocalDate(selectedRequest.endDate.toString()))
+                      .setZone("Asia/Manila")
+                      .toFormat("MMM dd, yyyy")}
                     <br />
-                    Total Days: {selectedRequest.duration} days
+                    Total Days: {calculateDuration(selectedRequest.startDate, selectedRequest.endDate)}
                   </p>
                 </div>
                 <div>
@@ -419,51 +302,56 @@ export default function PendingApprovals() {
                   <p className="text-sm">{selectedRequest.reason}</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">Leave Balances</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-600">Annual Leave</p>
-                      <p className="text-sm font-semibold">{selectedRequest.leaveBalance.annual} days</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-600">Sick Leave</p>
-                      <p className="text-sm font-semibold">{selectedRequest.leaveBalance.sick} days</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-600">Unpaid Leave</p>
-                      <p className="text-sm font-semibold">{selectedRequest.leaveBalance.unpaid} days</p>
-                    </div>
-                  </div>
+                  <h4 className="text-sm font-semibold">Submission Date</h4>
+                  <p className="text-sm">
+                    {DateTime.fromJSDate(parseLocalDate(selectedRequest.createdAt.toString()))
+                      .setZone("Asia/Manila")
+                      .toFormat("MMM dd, yyyy")}
+                  </p>
                 </div>
+                {selectedRequest.supportingDoc && (
+                  <div>
+                    <h4 className="text-sm font-semibold">Supporting Document</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-1">
+                      View Document
+                    </Button>
+                  </div>
+                )}
+
+                {/* Endorsement Information */}
+                {selectedRequest.manager && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-800">Endorsement Information</h4>
+                    <p className="text-sm">
+                      Endorsed By: {selectedRequest.manager.firstName} {selectedRequest.manager.lastName}
+                      <br />
+                      Endorsement Date:{" "}
+                      {DateTime.fromJSDate(parseLocalDate(selectedRequest.updatedAt.toString()))
+                        .setZone("Asia/Manila")
+                        .toFormat("MMM dd, yyyy")}
+                      {selectedRequest.managerComments && (
+                        <>
+                          <br />
+                          Endorsement Comments: {selectedRequest.managerComments}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
 
+              {/* Right Column - Top Management Action */}
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold">Status History</h4>
-                  <div className="space-y-2 mb-4">
-                    {selectedRequest.statusTrail.map((status, index) => (
-                      <div
-                        key={index}
-                        className="bg-gray-50 p-3 rounded-lg flex justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{status.status}</p>
-                          <p className="text-xs text-gray-600">{status.updatedBy}</p>
-                          {status.comments && <p className="text-xs text-gray-600 mt-1">{status.comments}</p>}
-                        </div>
-                        <p className="text-xs text-gray-600">
-                          {DateTime.fromJSDate(status.updatedAt).toFormat("dd LLL yyyy HH:mm")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold">Top Management Action</h4>
+                <div className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800">
+                  <h4>Top Management Action</h4>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium">Comments</label>
-                    {pendingAction === "Rejected" && (
+                    {isCommentsError && (
                       <Badge
                         variant="outline"
                         className="bg-amber-100 text-amber-800">
@@ -472,45 +360,44 @@ export default function PendingApprovals() {
                     )}
                   </div>
                   <Textarea
-                    placeholder="Enter your comments here (required for Reject action)"
-                    value={comments}
+                    placeholder="Enter your comments here (required when rejecting)"
+                    value={managementComments}
                     onChange={(e) => {
-                      setComments(e.target.value);
+                      setManagementComments(e.target.value);
                       // Clear error when user types
-                      if (commentsError && e.target.value.trim().length >= 10) {
-                        setCommentsError(null);
+                      if (isCommentsError && e.target.value.trim().length >= 10) {
+                        setIsCommentsError(false);
                       }
                     }}
-                    className={`resize-none ${commentsError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                    className={`resize-none ${isCommentsError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                   />
-                  {commentsError && <p className="text-red-500 text-sm">{commentsError}</p>}
+                  {isCommentsError && (
+                    <p className="text-red-500 text-sm">
+                      Comments are required when rejecting a request (minimum 10 characters)
+                    </p>
+                  )}
                 </div>
+
                 <div className="flex flex-wrap gap-3">
                   <Button
-                    onClick={() => handleActionClick("Approved")}
-                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => handleAction("approved")}
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={isProcessing}>
-                    {isProcessing && pendingAction === "Approved" ? (
-                      <>
-                        <span className="mr-2">Processing...</span>
-                        <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                      </>
-                    ) : (
-                      "Approve"
-                    )}
+                    {isProcessing ? "Processing..." : "Approve Leave Request"}
                   </Button>
                   <Button
-                    onClick={() => handleActionClick("Rejected")}
+                    onClick={() => handleAction("rejected")}
                     variant="destructive"
-                    disabled={isProcessing}>
-                    {isProcessing && pendingAction === "Rejected" ? (
-                      <>
-                        <span className="mr-2">Processing...</span>
-                        <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                      </>
-                    ) : (
-                      "Reject"
-                    )}
+                    disabled={isProcessing}
+                    className="bg-red-600 hover:bg-red-700">
+                    {isProcessing ? "Processing..." : "Reject Leave Request"}
+                  </Button>
+                  <Button
+                    onClick={() => handleAction("returned")}
+                    variant="outline"
+                    disabled={isProcessing}
+                    className="bg-blue-500 hover:bg-blue-600 text-white">
+                    {isProcessing ? "Processing..." : "Return to Manager"}
                   </Button>
                 </div>
               </div>
@@ -518,34 +405,6 @@ export default function PendingApprovals() {
           </CardContent>
         </Card>
       )}
-
-      {/* Confirmation Dialog */}
-      <AlertDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction === "Rejected" ? "Reject Leave Request" : "Approve Leave Request"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingAction === "Rejected"
-                ? "Are you sure you want to reject this leave request? This action cannot be undone."
-                : "Are you sure you want to approve this leave request? This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelAction}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmAction}
-              className={
-                pendingAction === "Rejected" ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-              }>
-              {pendingAction === "Rejected" ? "Reject" : "Approve"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

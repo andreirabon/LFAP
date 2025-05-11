@@ -4,7 +4,7 @@ import db from "@/db/index";
 import { leaveRequests } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/session";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 // Database schema type (based on error messages)
@@ -13,7 +13,7 @@ interface DbLeaveRequest {
   type: string;
   startDate: Date;
   endDate: Date;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
   createdAt: Date;
   updatedAt: Date;
   userId: number;
@@ -28,16 +28,17 @@ interface LeaveRequest {
   startDate: string;
   endDate: string;
   numberOfDays: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved";
   submittedDate: string;
 }
 
 function getStatusColor(status: LeaveRequest["status"]) {
   const colors = {
     pending: "bg-yellow-100 text-yellow-800",
+    endorsed: "bg-blue-100 text-blue-800",
     approved: "bg-green-100 text-green-800",
     rejected: "bg-red-100 text-red-800",
-    cancelled: "bg-gray-100 text-gray-800",
+    returned: "bg-orange-100 text-orange-800",
   };
   return colors[status];
 }
@@ -83,12 +84,9 @@ export default async function TrackStatus() {
     redirect("/login");
   }
 
-  // Fetch leave requests for the current user
+  // Fetch all leave requests for the current user regardless of status
   const userLeaveRequests = (await db.query.leaveRequests.findMany({
-    where: and(
-      inArray(leaveRequests.status, ["pending", "approved", "rejected"] as const),
-      eq(leaveRequests.userId, userId),
-    ),
+    where: eq(leaveRequests.userId, userId),
     orderBy: [desc(leaveRequests.createdAt)],
   })) as DbLeaveRequest[];
 
@@ -99,42 +97,46 @@ export default async function TrackStatus() {
     <div className="container mx-auto py-8 px-4">
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Leave Request Status</CardTitle>
+          <CardTitle>Leave Request Status ({mappedLeaveRequests.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Request ID</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mappedLeaveRequests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell className="font-medium">{request.id}</TableCell>
-                  <TableCell>{request.type}</TableCell>
-                  <TableCell>
-                    {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                  </TableCell>
-                  <TableCell>{request.numberOfDays}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
-                        request.status,
-                      )}`}>
-                      {request.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>{formatDate(request.submittedDate)}</TableCell>
+          {mappedLeaveRequests.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Days</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {mappedLeaveRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">{request.id}</TableCell>
+                    <TableCell>{request.type}</TableCell>
+                    <TableCell>
+                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                    </TableCell>
+                    <TableCell>{request.numberOfDays}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
+                          request.status,
+                        )}`}>
+                        {request.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDate(request.submittedDate)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">No pending requests at this time</div>
+          )}
         </CardContent>
       </Card>
     </div>

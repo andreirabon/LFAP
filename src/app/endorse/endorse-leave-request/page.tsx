@@ -502,8 +502,8 @@ export default function EndorseLeaveRequest() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold">Manager Action</h4>
+                <div className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800">
+                  <h4>Manager Action</h4>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -541,7 +541,7 @@ export default function EndorseLeaveRequest() {
                         <Skeleton className="h-4 w-4 rounded-full animate-spin" />
                       </>
                     ) : (
-                      "Endorse"
+                      "Endorse Leave Request"
                     )}
                   </Button>
                   <Button
@@ -554,7 +554,7 @@ export default function EndorseLeaveRequest() {
                         <Skeleton className="h-4 w-4 rounded-full animate-spin" />
                       </>
                     ) : (
-                      "Reject"
+                      "Reject Leave Request"
                     )}
                   </Button>
                   <Button

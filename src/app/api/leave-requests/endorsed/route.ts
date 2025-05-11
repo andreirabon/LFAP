@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    // First, fetch the leave requests with status 'endorsed'
     const endorsedRequests = await db
       .select({
         id: leaveRequests.id,
@@ -15,9 +16,10 @@ export async function GET() {
         status: leaveRequests.status,
         supportingDoc: leaveRequests.supportingDoc,
         managerComments: leaveRequests.managerComments,
+        managerId: leaveRequests.managerId,
         createdAt: leaveRequests.createdAt,
         updatedAt: leaveRequests.updatedAt,
-        employee: {
+        user: {
           id: users.id,
           firstName: users.firstName,
           lastName: users.lastName,
@@ -27,10 +29,34 @@ export async function GET() {
       })
       .from(leaveRequests)
       .leftJoin(users, eq(leaveRequests.userId, users.id))
-      .where(eq(leaveRequests.status, "approved"))
+      .where(eq(leaveRequests.status, "endorsed"))
       .orderBy(leaveRequests.updatedAt);
 
-    return NextResponse.json(endorsedRequests);
+    // For each request, fetch the manager information
+    const requestsWithManagerInfo = await Promise.all(
+      endorsedRequests.map(async (request) => {
+        if (request.managerId) {
+          const manager = await db
+            .select({
+              firstName: users.firstName,
+              lastName: users.lastName,
+            })
+            .from(users)
+            .where(eq(users.id, request.managerId))
+            .limit(1);
+
+          if (manager.length > 0) {
+            return {
+              ...request,
+              manager: manager[0],
+            };
+          }
+        }
+        return request;
+      }),
+    );
+
+    return NextResponse.json(requestsWithManagerInfo);
   } catch (error) {
     console.error("Error fetching endorsed leave requests:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
