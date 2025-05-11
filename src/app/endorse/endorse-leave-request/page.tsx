@@ -39,7 +39,7 @@ interface LeaveRequest {
   endDate: string; // ISO date string from API
   reason: string;
   createdAt: string; // ISO date string from API (was submittedDate)
-  status: "pending" | "approved" | "rejected" | "returned" | "endorsed";
+  status: "pending" | "approved" | "rejected" | "returned" | "endorsed" | "tm_returned";
   supportingDoc?: string | null;
   managerComments?: string | null;
 }
@@ -62,6 +62,7 @@ const statusDisplayMap = {
   rejected: "Rejected",
   returned: "Returned",
   endorsed: "Endorsed",
+  tm_returned: "Returned by Top Management",
 };
 
 function formatDate(dateString: string) {
@@ -105,14 +106,24 @@ export default function EndorseLeaveRequest() {
           return; // Exit early if not logged in
         }
 
-        // Fetch leave requests if authenticated
-        const requestsResponse = await fetch("/api/leave-requests/pending-endorsement");
-        if (!requestsResponse.ok) {
-          throw new Error(`Fetching leave requests failed: ${requestsResponse.status}`);
+        // Fetch leave requests if authenticated - now fetching both pending and tm_returned
+        const pendingResponse = await fetch("/api/leave-requests/pending-endorsement");
+        if (!pendingResponse.ok) {
+          throw new Error(`Fetching pending leave requests failed: ${pendingResponse.status}`);
         }
-        const fetchedRequests: LeaveRequest[] = await requestsResponse.json();
-        setRequests(fetchedRequests);
-        setFilteredRequests(fetchedRequests);
+        const pendingRequests: LeaveRequest[] = await pendingResponse.json();
+
+        // Fetch tm_returned requests
+        const returnedResponse = await fetch("/api/leave-requests/tm-returned");
+        if (!returnedResponse.ok) {
+          throw new Error(`Fetching returned leave requests failed: ${returnedResponse.status}`);
+        }
+        const tmReturnedRequests: LeaveRequest[] = await returnedResponse.json();
+
+        // Combine both types of requests
+        const allRequests = [...pendingRequests, ...tmReturnedRequests];
+        setRequests(allRequests);
+        setFilteredRequests(allRequests);
       } catch (error) {
         console.error("Error during auth check or data fetching:", error);
         setError(error instanceof Error ? error.message : "An unexpected error occurred");
@@ -152,17 +163,12 @@ export default function EndorseLeaveRequest() {
   };
 
   // Action types matching DB statuses
-  type ActionDbStatus = "approved" | "rejected" | "returned" | "endorsed";
+  type ActionDbStatus = "approved" | "rejected" | "returned" | "endorsed" | "tm_returned";
 
   // Validate comments based on action type
   const validateComments = (action: ActionDbStatus, comments: string): boolean => {
-    if (action === "rejected" && !comments.trim()) {
-      setCommentsError("Comments are required to reject a request");
-      return false;
-    }
-
-    if (action === "returned" && !comments.trim()) {
-      setCommentsError("Comments are required to return a request");
+    if ((action === "rejected" || action === "returned") && !comments.trim()) {
+      setCommentsError("Comments are required to reject or return a request");
       return false;
     }
 
@@ -305,6 +311,7 @@ export default function EndorseLeaveRequest() {
       rejected: "bg-red-100 text-red-800",
       returned: "bg-orange-100 text-orange-800",
       endorsed: "bg-blue-100 text-blue-800",
+      tm_returned: "bg-amber-100 text-amber-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800"; // Default/fallback color
   };
@@ -406,12 +413,12 @@ export default function EndorseLeaveRequest() {
       {/* Pending Requests List */}
       <Card>
         <CardHeader>
-          <CardTitle>Pending Leave Requests ({filteredRequests.length})</CardTitle>
+          <CardTitle>Pending Endorsement and Returned Requests ({filteredRequests.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {filteredRequests.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "No matching requests found" : "No pending requests at this time"}
+              {searchTerm ? "No matching requests found" : "No pending or returned requests at this time"}
             </div>
           ) : (
             <Table>
@@ -547,46 +554,67 @@ export default function EndorseLeaveRequest() {
                   {commentsError && <p className="text-red-500 text-sm">{commentsError}</p>}
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <Button
-                    onClick={() => handleActionClick("endorsed")}
-                    className="bg-green-600 hover:bg-green-700"
-                    disabled={isProcessing}>
-                    {isProcessing && pendingAction === "endorsed" ? (
-                      <>
-                        <span className="mr-2">Processing...</span>
-                        <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                      </>
-                    ) : (
-                      "Endorse Leave Request"
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleActionClick("rejected")}
-                    variant="destructive"
-                    disabled={isProcessing}>
-                    {isProcessing && pendingAction === "rejected" ? (
-                      <>
-                        <span className="mr-2">Processing...</span>
-                        <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                      </>
-                    ) : (
-                      "Reject Leave Request"
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleActionClick("returned")}
-                    variant="outline"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    disabled={isProcessing}>
-                    {isProcessing && pendingAction === "returned" ? (
-                      <>
-                        <span className="mr-2">Processing...</span>
-                        <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                      </>
-                    ) : (
-                      "Return for Clarification"
-                    )}
-                  </Button>
+                  {selectedRequest.status === "pending" && (
+                    <>
+                      <Button
+                        onClick={() => handleActionClick("endorsed")}
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={isProcessing}>
+                        {isProcessing && pendingAction === "endorsed" ? (
+                          <>
+                            <span className="mr-2">Processing...</span>
+                            <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                          </>
+                        ) : (
+                          "Endorse Leave Request"
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => handleActionClick("rejected")}
+                        variant="destructive"
+                        disabled={isProcessing}>
+                        {isProcessing && pendingAction === "rejected" ? (
+                          <>
+                            <span className="mr-2">Processing...</span>
+                            <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                          </>
+                        ) : (
+                          "Reject Leave Request"
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => handleActionClick("returned")}
+                        variant="outline"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={isProcessing}>
+                        {isProcessing && pendingAction === "returned" ? (
+                          <>
+                            <span className="mr-2">Processing...</span>
+                            <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                          </>
+                        ) : (
+                          "Return for Clarification"
+                        )}
+                      </Button>
+                    </>
+                  )}
+
+                  {selectedRequest.status === "tm_returned" && (
+                    <Button
+                      onClick={() => handleActionClick("returned")}
+                      variant="outline"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={isProcessing}>
+                      {isProcessing && pendingAction === "returned" ? (
+                        <>
+                          <span className="mr-2">Processing...</span>
+                          <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                        </>
+                      ) : (
+                        "Return for Clarification"
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -39,6 +39,16 @@ interface Subordinate {
   leaveBalances: LeaveBalance[];
 }
 
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  department: string | null;
+  isLoggedIn: boolean;
+}
+
 function ViewLeaveBalancesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +59,7 @@ function ViewLeaveBalancesContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(!!searchQuery);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
@@ -67,7 +78,7 @@ function ViewLeaveBalancesContent() {
     }
   }, [debouncedSearchTerm, router, hasSearched, searchTerm]);
 
-  // Check authentication
+  // Check authentication and get user data
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -76,11 +87,17 @@ function ViewLeaveBalancesContent() {
           throw new Error("Failed to fetch session");
         }
         const data = await response.json();
+
+        console.log("Session data:", data); // Debug session data
+
         if (!data.isLoggedIn) {
           router.replace("/login");
         } else if (data.role !== "Manager" && data.role !== "Super Admin") {
           // Redirect if not a manager or admin
           router.replace("/");
+        } else {
+          // Store the current user data including department
+          setCurrentUser(data);
         }
       } catch (error) {
         console.error("Error checking auth:", error);
@@ -96,23 +113,104 @@ function ViewLeaveBalancesContent() {
     // Don't fetch if:
     // 1. User hasn't searched yet
     // 2. Search term is empty
-    if (!hasSearched || !debouncedSearchTerm.trim()) return;
+    // 3. Current user data is not available
+    if (!hasSearched || !debouncedSearchTerm.trim() || !currentUser) return;
 
     const fetchSubordinates = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const url = `/api/subordinates?search=${encodeURIComponent(debouncedSearchTerm)}`;
-        const response = await fetch(url);
+        // First try the specialized endpoint for same-department filtering
+        const sameDeptUrl = `/api/subordinates/same-department?search=${encodeURIComponent(debouncedSearchTerm)}`;
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch subordinates");
+        console.log("Current user:", {
+          role: currentUser.role,
+          department: currentUser.department,
+        });
+        console.log("Trying API endpoint:", sameDeptUrl);
+
+        let response;
+        let data;
+        let usedFallback = false;
+
+        try {
+          // Try the new specialized endpoint first
+          response = await fetch(sameDeptUrl);
+
+          if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+          }
+
+          data = await response.json();
+          console.log("API response successful");
+        } catch (endpointError: any) {
+          // If the specialized endpoint fails, fall back to the original
+          console.warn("Specialized endpoint failed:", endpointError.message);
+          console.log("Falling back to original endpoint");
+
+          usedFallback = true;
+
+          // Build the original endpoint URL with department filter
+          let fallbackUrl = `/api/subordinates?search=${encodeURIComponent(debouncedSearchTerm)}`;
+          if (currentUser.role !== "Super Admin" && currentUser.department) {
+            fallbackUrl += `&department=${encodeURIComponent(currentUser.department)}`;
+          }
+
+          response = await fetch(fallbackUrl);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Fallback API error response:", errorText);
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
+
+          data = await response.json();
+          console.log("Fallback API response successful");
         }
 
-        const data = await response.json();
+        console.log("Raw API response:", data);
 
-        // Process subordinates data
+        // Get original data count before filtering
+        const originalCount = data.length;
+
+        // STRICT CLIENT-SIDE FILTERING: Only show subordinates from the same department
+        if (currentUser.role !== "Super Admin" && currentUser.department) {
+          // Only keep subordinates from the same department
+          data = data.filter((sub: Subordinate) => {
+            const isDepartmentMatch = sub.department === currentUser.department;
+
+            if (!isDepartmentMatch) {
+              console.warn(`Filtering out subordinate from different department:
+                ID: ${sub.id},
+                Name: ${sub.firstName} ${sub.lastName},
+                Department: ${sub.department || "None"}
+                (Current user department: ${currentUser.department})`);
+            }
+
+            return isDepartmentMatch;
+          });
+
+          // Log filtering results
+          const filteredCount = originalCount - data.length;
+          if (filteredCount > 0) {
+            console.warn(`Client-side filtering removed ${filteredCount} subordinates from different departments`);
+          }
+
+          // If no matching subordinates remain after filtering but results were found initially
+          if (data.length === 0 && originalCount > 0) {
+            console.log("All subordinates were filtered out - none match current user's department");
+            // Set an error message to inform the user they can only view their department
+            setError(
+              `You can only view subordinates from your department (${currentUser.department}). The search matched people from other departments.`,
+            );
+            setSubordinates([]);
+            setIsLoading(false);
+            return; // Exit early since we have no valid data to process
+          }
+        }
+
+        // Process leave balances for each subordinate
         const processedSubordinates = data.map((sub: Subordinate) => {
           // Filter leave balances based on gender
           const filteredBalances = processLeaveBalances(sub);
@@ -141,16 +239,22 @@ function ViewLeaveBalancesContent() {
         });
 
         setSubordinates(processedSubordinates);
-      } catch (error) {
+        console.log("Current user department:", currentUser.department);
+        console.log("Processed subordinates count:", processedSubordinates.length);
+
+        if (usedFallback) {
+          console.log("Note: Used fallback endpoint with client-side filtering");
+        }
+      } catch (error: any) {
         console.error("Error fetching subordinates:", error);
-        setError("Failed to load subordinates. Please try again later.");
+        setError(`Failed to load subordinates: ${error.message || "Unknown error"}`);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchSubordinates();
-  }, [debouncedSearchTerm, hasSearched]);
+  }, [debouncedSearchTerm, hasSearched, currentUser]);
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -254,13 +358,29 @@ function ViewLeaveBalancesContent() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">View Subordinate Leave Balances</h1>
+      {currentUser?.department && (
+        <div className="mb-4">
+          <p className="text-md text-gray-600">
+            Department: <span className="font-medium">{currentUser.department}</span>
+          </p>
+          {currentUser.role !== "Super Admin" && (
+            <p className="text-sm text-amber-600 mt-1">
+              <strong>Important:</strong> You can only view subordinates from your department.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Search Section */}
       <div className="flex gap-4 mb-8">
         <div className="relative flex-1">
           <Input
             type="text"
-            placeholder="Search by name or ID"
+            placeholder={
+              currentUser?.role === "Super Admin"
+                ? "Search by name or ID"
+                : `Search for ${currentUser?.department} subordinates only`
+            }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pr-10 w-full"
@@ -314,6 +434,9 @@ function ViewLeaveBalancesContent() {
                   <CardTitle className="text-center">
                     {subordinate.firstName} {subordinate.lastName}
                   </CardTitle>
+                  {subordinate.department && (
+                    <p className="text-center text-sm text-gray-500">Department: {subordinate.department}</p>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div>

@@ -47,6 +47,7 @@ export async function loginUser(_prevState: LoginState | null, formData: FormDat
     session.lastName = user[0].lastName;
     session.email = user[0].email;
     session.role = user[0].role;
+    session.department = user[0].department;
     await session.save();
 
     shouldRedirect = true;

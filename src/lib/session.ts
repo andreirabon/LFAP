@@ -8,6 +8,7 @@ export interface SessionData {
   lastName?: string;
   email?: string;
   role?: string;
+  department?: string | null;
 }
 
 const sessionOptions = {

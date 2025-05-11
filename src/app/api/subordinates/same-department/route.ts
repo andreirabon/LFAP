@@ -34,53 +34,44 @@ export async function GET(request: NextRequest) {
 
     // Get search params from URL
     const searchQuery = request.nextUrl.searchParams.get("search") || "";
-    // Get department filter (if specified in request)
-    const departmentFilter = request.nextUrl.searchParams.get("department");
+
+    // IMPORTANT: For regular managers, department filtering is MANDATORY
+    if (manager.role !== "Super Admin" && !manager.department) {
+      console.log("Manager without department - returning empty result");
+      return NextResponse.json([]);
+    }
 
     console.log("API Request Info:", {
       userId: session.userId,
       managerRole: manager.role,
       managerDepartment: manager.department,
       searchQuery,
-      departmentFilter,
     });
 
-    // Create base query conditions
-    let queryConditions = [];
+    // Create query conditions
+    const queryConditions = [
+      // Always exclude the current user
+      ne(users.id, manager.id),
+    ];
 
-    // Always exclude the current user from results
-    queryConditions.push(ne(users.id, manager.id));
-
-    // Add search filter if search query exists
+    // Add search condition if provided
     if (searchQuery && searchQuery.trim() !== "") {
       queryConditions.push(or(ilike(users.firstName, `%${searchQuery}%`), ilike(users.lastName, `%${searchQuery}%`)));
     }
 
-    // Handle department filtering differently based on role
-    if (manager.role === "Super Admin") {
-      // Super Admin with explicit department filter
-      if (departmentFilter && departmentFilter.trim() !== "") {
-        console.log("Super Admin filtering by department:", departmentFilter);
-        queryConditions.push(eq(users.department, departmentFilter));
-      } else {
-        console.log("Super Admin viewing all departments");
-        // No department filter for Super Admin
-      }
-    } else {
-      // Regular managers MUST only see their own department
+    // For regular managers, ALWAYS filter by department
+    // For Super Admins, we don't filter by department (they see all)
+    if (manager.role !== "Super Admin") {
       if (!manager.department) {
-        console.log("Manager without department - no results will be shown");
-        return NextResponse.json([]); // Return empty array if manager has no department
+        return NextResponse.json([]);
       }
-
-      console.log("Restricting to manager's department:", manager.department);
+      console.log("Filtering by department:", manager.department);
       queryConditions.push(eq(users.department, manager.department));
     }
 
-    // Combine all conditions with AND
     const finalQuery = and(...queryConditions);
-
-    console.log("Final query conditions:", JSON.stringify(queryConditions, null, 2));
+    // Don't stringify objects with circular references
+    console.log("Query conditions applied");
 
     // Execute query
     const subordinates = await db
@@ -108,22 +99,21 @@ export async function GET(request: NextRequest) {
       .where(finalQuery)
       .orderBy(users.firstName, users.lastName);
 
-    console.log(`Found ${subordinates.length} subordinates matching criteria`);
+    console.log(`Found ${subordinates.length} subordinates in same department`);
 
-    // Extra verification on the results (debug logging)
+    // Double-check results - STRICT FILTERING for regular managers
     if (manager.role !== "Super Admin" && manager.department) {
-      const wrongDept = subordinates.filter((sub) => sub.department !== manager.department);
-      if (wrongDept.length > 0) {
-        console.error(`Error: Found ${wrongDept.length} subordinates from wrong departments!`);
-        console.error(
-          "Problem subordinates:",
-          wrongDept.map((sub) => ({
-            id: sub.id,
-            name: `${sub.firstName} ${sub.lastName}`,
-            dept: sub.department,
-          })),
-        );
+      // Filter out any subordinates that don't match the manager's department
+      const filteredSubordinates = subordinates.filter((sub) => sub.department === manager.department);
+
+      // Log if any were filtered out
+      const filteredCount = subordinates.length - filteredSubordinates.length;
+      if (filteredCount > 0) {
+        console.warn(`Filtered out ${filteredCount} subordinates from different departments`);
       }
+
+      // Return only the filtered subordinates that match the department
+      return NextResponse.json(filteredSubordinates);
     }
 
     return NextResponse.json(subordinates);

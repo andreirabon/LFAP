@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import db from "@/db/index";
@@ -5,6 +6,7 @@ import { leaveRequests } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/session";
 import { desc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 // Database schema type (based on error messages)
@@ -127,6 +129,7 @@ export default async function TrackStatus() {
                   <TableHead>Days</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -147,6 +150,18 @@ export default async function TrackStatus() {
                       </span>
                     </TableCell>
                     <TableCell>{formatDate(request.submittedDate)}</TableCell>
+                    <TableCell>
+                      {(request.status === "returned" || request.status === "tm_returned") && (
+                        <Link href={`/leave-request/edit/${request.id}`}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="bg-orange-100 text-orange-800">
+                            Edit Request
+                          </Button>
+                        </Link>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

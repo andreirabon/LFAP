@@ -102,7 +102,13 @@ export default function PendingApprovals() {
       toast.error("Comments are required when rejecting a request (minimum 10 characters)");
       return false;
     }
-    // Comments are optional for 'approved' and 'returned' actions
+    // Comments are also required for returned action
+    if (action === "returned" && (!managementComments || managementComments.trim().length < 10)) {
+      setIsCommentsError(true);
+      toast.error("Comments are required when returning a request (minimum 10 characters)");
+      return false;
+    }
+    // Comments are optional for 'approved' action
     setIsCommentsError(false);
     return true;
   };
