@@ -261,7 +261,11 @@ export default function NavigationBar() {
         <div className="hidden md:flex md:flex-1 md:justify-start md:ml-2">
           <NavigationMenu>
             <NavigationMenuList className="gap-1">
-              {(user.role === "Employee" || user.role === "Super Admin") && (
+              {/* Leave Request - Available for Employee, Manager, HR Admin, Super Admin */}
+              {(user.role === "Employee" ||
+                user.role === "Manager" ||
+                user.role === "HR Admin" ||
+                user.role === "Super Admin") && (
                 <NavigationMenuItem>
                   <NavigationMenuTrigger
                     className={cn(
@@ -276,6 +280,7 @@ export default function NavigationBar() {
                 </NavigationMenuItem>
               )}
 
+              {/* Endorsements - Available for Manager and Super Admin */}
               {(user.role === "Manager" || user.role === "Super Admin") && (
                 <NavigationMenuItem>
                   <NavigationMenuTrigger
@@ -289,37 +294,38 @@ export default function NavigationBar() {
                 </NavigationMenuItem>
               )}
 
+              {/* Leave Balance - Available for HR Admin and Super Admin */}
               {(user.role === "HR Admin" || user.role === "Super Admin") && (
-                <>
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/leave-balance-management"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          "text-xs lg:text-sm px-2",
-                          pathname === "/leave-balance-management"
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground",
-                        )}>
-                        Leave Balance
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href="/leave-balance-management"
                       className={cn(
+                        navigationMenuTriggerStyle(),
                         "text-xs lg:text-sm px-2",
-                        pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                        pathname === "/leave-balance-management"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground",
                       )}>
-                      Reports
-                    </NavigationMenuTrigger>
-                    <ReportsContent />
-                  </NavigationMenuItem>
-                </>
+                      Leave Balance
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
               )}
 
+              {/* Reports - Available for all roles */}
+              <NavigationMenuItem>
+                <NavigationMenuTrigger
+                  className={cn(
+                    "text-xs lg:text-sm px-2",
+                    pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  )}>
+                  Reports
+                </NavigationMenuTrigger>
+                <ReportsContent />
+              </NavigationMenuItem>
+
+              {/* Approvals - Available for Top Management and Super Admin */}
               {(user.role === "Top Management" || user.role === "Super Admin") && (
                 <NavigationMenuItem>
                   <NavigationMenuTrigger
@@ -333,57 +339,20 @@ export default function NavigationBar() {
                 </NavigationMenuItem>
               )}
 
-              {user.role === "Super Admin" ? (
-                <>
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/audit-trail"
-                        className={cn(
-                          navigationMenuTriggerStyle(),
-                          "text-xs lg:text-sm px-2",
-                          pathname === "/audit-trail" ? "bg-accent text-accent-foreground" : "text-muted-foreground",
-                        )}>
-                        Audit
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                </>
-              ) : (
-                user.role !== "Employee" &&
-                user.role !== "Manager" &&
-                user.role !== "HR Admin" &&
-                user.role !== "Top Management" && (
-                  <>
-                    <NavigationMenuItem>
-                      <NavigationMenuTrigger
-                        className={cn(
-                          "text-xs lg:text-sm px-2",
-                          pathname.startsWith("/reports")
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground",
-                        )}>
-                        Reports
-                      </NavigationMenuTrigger>
-                      <ReportsContent />
-                    </NavigationMenuItem>
-
-                    <NavigationMenuItem>
-                      <NavigationMenuLink asChild>
-                        <Link
-                          href="/audit-trail"
-                          className={cn(
-                            navigationMenuTriggerStyle(),
-                            "text-xs lg:text-sm px-2",
-                            pathname === "/audit-trail" ? "bg-accent text-accent-foreground" : "text-muted-foreground",
-                          )}>
-                          Audit
-                        </Link>
-                      </NavigationMenuLink>
-                    </NavigationMenuItem>
-                  </>
-                )
-              )}
+              {/* Audit Trail - Available for all roles */}
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href="/audit-trail"
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      "text-xs lg:text-sm px-2",
+                      pathname === "/audit-trail" ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                    )}>
+                    Audit Trail
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
         </div>
@@ -445,7 +414,10 @@ export default function NavigationBar() {
               className="w-80">
               <div className="flex flex-col space-y-4 mt-6">
                 {/* Leave Request Section */}
-                {(user.role === "Employee" || user.role === "Super Admin") && (
+                {(user.role === "Employee" ||
+                  user.role === "Manager" ||
+                  user.role === "HR Admin" ||
+                  user.role === "Super Admin") && (
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium">Leave Request</h3>
                     <div className="pl-2 space-y-2 flex flex-col">
@@ -485,6 +457,7 @@ export default function NavigationBar() {
                   </div>
                 )}
 
+                {/* Endorsements Section */}
                 {(user.role === "Manager" || user.role === "Super Admin") && (
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium">Endorsements</h3>
@@ -517,53 +490,54 @@ export default function NavigationBar() {
                   </div>
                 )}
 
+                {/* Leave Balance Section */}
                 {(user.role === "HR Admin" || user.role === "Super Admin") && (
-                  <>
-                    <Link
-                      href="/leave-balance-management"
-                      className={cn(
-                        "text-sm font-medium transition-colors hover:text-primary",
-                        pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
-                      )}>
-                      Leave Balance Management
-                    </Link>
-
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium">Reports & Logs</h3>
-                      <div className="pl-2 space-y-2 flex flex-col">
-                        <Link
-                          href="/reports-and-logs/leave-history-report"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/leave-history-report"
-                              ? "text-primary"
-                              : "text-muted-foreground",
-                          )}>
-                          Leave History Report
-                        </Link>
-                        <Link
-                          href="/reports-and-logs/monthly-leave-util-report"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/monthly-leave-util-report"
-                              ? "text-primary"
-                              : "text-muted-foreground",
-                          )}>
-                          Monthly Leave Utilization
-                        </Link>
-                        <Link
-                          href="/reports-and-logs/approval-logs"
-                          className={cn(
-                            "text-sm transition-colors hover:text-primary",
-                            pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
-                          )}>
-                          Approval Logs
-                        </Link>
-                      </div>
-                    </div>
-                  </>
+                  <Link
+                    href="/leave-balance-management"
+                    className={cn(
+                      "text-sm font-medium transition-colors hover:text-primary",
+                      pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
+                    )}>
+                    Leave Balance Management
+                  </Link>
                 )}
 
+                {/* Reports Section - Available for all roles */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Reports & Logs</h3>
+                  <div className="pl-2 space-y-2 flex flex-col">
+                    <Link
+                      href="/reports-and-logs/leave-history-report"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/leave-history-report"
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}>
+                      Leave History Report
+                    </Link>
+                    <Link
+                      href="/reports-and-logs/monthly-leave-util-report"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/monthly-leave-util-report"
+                          ? "text-primary"
+                          : "text-muted-foreground",
+                      )}>
+                      Monthly Leave Utilization
+                    </Link>
+                    <Link
+                      href="/reports-and-logs/approval-logs"
+                      className={cn(
+                        "text-sm transition-colors hover:text-primary",
+                        pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Approval Logs
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Approvals Section */}
                 {(user.role === "Top Management" || user.role === "Super Admin") && (
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium">Approvals</h3>
@@ -596,36 +570,15 @@ export default function NavigationBar() {
                   </div>
                 )}
 
-                {user.role === "Super Admin" ? (
-                  <>
-                    {/* Audit Trail */}
-                    <Link
-                      href="/audit-trail"
-                      className={cn(
-                        "text-sm font-medium transition-colors hover:text-primary",
-                        pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
-                      )}>
-                      Audit Trail
-                    </Link>
-                  </>
-                ) : (
-                  user.role !== "Employee" &&
-                  user.role !== "Manager" &&
-                  user.role !== "HR Admin" &&
-                  user.role !== "Top Management" && (
-                    <>
-                      {/* Audit Trail */}
-                      <Link
-                        href="/audit-trail"
-                        className={cn(
-                          "text-sm font-medium transition-colors hover:text-primary",
-                          pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Audit Trail
-                      </Link>
-                    </>
-                  )
-                )}
+                {/* Audit Trail - Available for all roles */}
+                <Link
+                  href="/audit-trail"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
+                  )}>
+                  Audit Trail
+                </Link>
 
                 <div className="border-t pt-4 mt-4">
                   <div className="flex flex-col space-y-1 mb-4">
