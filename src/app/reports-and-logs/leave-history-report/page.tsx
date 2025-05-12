@@ -1,183 +1,196 @@
-"use client";
-
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { DateTime } from "luxon";
-import { useMemo, useState } from "react";
+import db from "@/db/index";
+import { leaveRequests, users } from "@/db/schema";
+import { getSession } from "@/lib/session";
+import { desc, inArray } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
-// Types
-interface LeaveRequest {
+// Database schema type (based on error messages)
+interface DbLeaveRequest {
   id: number;
-  employeeName: string;
-  leaveType: string;
-  requestDate: string;
-  startDate: string;
-  endDate: string;
-  status: "Approved" | "Pending" | "Rejected";
+  type: string;
+  startDate: Date;
+  endDate: Date;
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
+  createdAt: Date;
+  updatedAt: Date;
+  userId: number;
+  reason: string;
+  supportingDoc: string | null;
 }
 
-// Mock Data
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: 1,
-    employeeName: "John Doe",
-    leaveType: "Annual",
-    requestDate: "2024-03-01",
-    startDate: "2024-03-15",
-    endDate: "2024-03-20",
-    status: "Approved",
-  },
-  {
-    id: 2,
-    employeeName: "Jane Smith",
-    leaveType: "Sick",
-    requestDate: "2024-03-02",
-    startDate: "2024-03-10",
-    endDate: "2024-03-12",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    employeeName: "Mike Johnson",
-    leaveType: "Unpaid",
-    requestDate: "2024-03-03",
-    startDate: "2024-04-01",
-    endDate: "2024-04-05",
-    status: "Rejected",
-  },
-  {
-    id: 4,
-    employeeName: "Sarah Williams",
-    leaveType: "Annual",
-    requestDate: "2024-03-04",
-    startDate: "2024-03-25",
-    endDate: "2024-03-30",
-    status: "Approved",
-  },
-  {
-    id: 5,
-    employeeName: "Robert Brown",
-    leaveType: "Sick",
-    requestDate: "2024-03-05",
-    startDate: "2024-03-08",
-    endDate: "2024-03-09",
-    status: "Pending",
-  },
-];
+// User data type
+interface UserData {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
-// Format date function
-const formatDate = (dateStr: string) => {
-  return DateTime.fromISO(dateStr).toFormat("dd LLL yyyy");
-};
+// View model type for the UI
+interface LeaveRequest {
+  id: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  numberOfDays: number;
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
+  submittedDate: string;
+  userName: string;
+  userEmail: string;
+}
 
-export default function LeaveHistoryReportPage() {
-  // State for leave requests
-  const [leaveRequests] = useState<LeaveRequest[]>(mockLeaveRequests);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof LeaveRequest;
-    direction: "asc" | "desc";
-  } | null>(null);
-
-  // Sorting function
-  const handleSort = (key: keyof LeaveRequest) => {
-    setSortConfig((currentSort) => ({
-      key,
-      direction: currentSort?.key === key && currentSort?.direction === "asc" ? "desc" : "asc",
-    }));
+function getStatusColor(status: LeaveRequest["status"]) {
+  const colors = {
+    pending: "bg-yellow-100 text-yellow-800",
+    endorsed: "bg-blue-100 text-blue-800",
+    approved: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    returned: "bg-orange-100 text-orange-800",
+    tm_approved: "bg-emerald-100 text-emerald-800",
+    tm_rejected: "bg-rose-100 text-rose-800",
+    tm_returned: "bg-amber-100 text-amber-800",
   };
+  return colors[status];
+}
 
-  // Filter and sort the data
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = [...leaveRequests];
+function getStatusDisplayText(status: LeaveRequest["status"]) {
+  const displayText = {
+    pending: "Waiting to be Endorsed by Manager",
+    endorsed: "Endorsed by the Manager",
+    approved: "Approved by the Manager",
+    rejected: "Rejected by the Manager",
+    returned: "Returned by the Manager",
+    tm_approved: "Approved by the Top Management",
+    tm_rejected: "Rejected by the Top Management",
+    tm_returned: "Returned by the Top Management",
+  };
+  return displayText[status];
+}
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((request) => request.status === statusFilter);
-    }
+function formatDate(date: Date | string) {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return dateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-    // Apply sorting
-    if (sortConfig) {
-      filtered.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
-    }
+function calculateDays(startDate: Date, endDate: Date): number {
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
 
-    return filtered;
-  }, [leaveRequests, statusFilter, sortConfig]);
+function mapDbToViewLeaveRequest(dbRequest: DbLeaveRequest, usersMap: Map<number, UserData>): LeaveRequest {
+  const user = usersMap.get(dbRequest.userId);
+  const userName = user ? `${user.firstName} ${user.lastName}` : "Unknown User";
+
+  return {
+    id: dbRequest.id.toString(),
+    type: dbRequest.type,
+    startDate: dbRequest.startDate.toISOString(),
+    endDate: dbRequest.endDate.toISOString(),
+    numberOfDays: calculateDays(dbRequest.startDate, dbRequest.endDate),
+    status: dbRequest.status,
+    submittedDate: dbRequest.createdAt.toISOString(),
+    userName,
+    userEmail: user?.email || "No Email",
+  };
+}
+
+export default async function ApprovalLogs() {
+  const session = await getSession();
+
+  if (!session.isLoggedIn) {
+    redirect("/login");
+  }
+
+  // Fetch all leave requests without filtering by status
+  const allLeaveRequests = (await db
+    .select()
+    .from(leaveRequests)
+    .orderBy(desc(leaveRequests.createdAt))) as DbLeaveRequest[];
+
+  // Extract all unique user IDs from the requests
+  const userIds = [...new Set(allLeaveRequests.map((request) => request.userId))];
+
+  // Only try to fetch user data if we have any requests
+  const usersMap = new Map<number, UserData>();
+
+  if (userIds.length > 0) {
+    // Fetch user data for these users using the inArray operator
+    const usersData = (await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(users)
+      .where(inArray(users.id, userIds))) as UserData[];
+
+    // Create a map of user id to user data for easy lookup
+    usersData.forEach((user) => {
+      usersMap.set(user.id, user);
+    });
+  }
+
+  // Map database results to view model
+  const mappedLeaveRequests = allLeaveRequests.map((request) => mapDbToViewLeaveRequest(request, usersMap));
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Leave History Report</h1>
-      </div>
-
-      {/* Filter Section */}
-      <div className="mb-6">
-        <Select
-          defaultValue={statusFilter}
-          onValueChange={(value: string) => setStatusFilter(value)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Approved">Approved</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Rejected">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Employee Name</TableHead>
-            <TableHead>Leave Type</TableHead>
-            <TableHead>Request Date</TableHead>
-            <TableHead
-              className="cursor-pointer"
-              onClick={() => handleSort("startDate")}>
-              Start Date {sortConfig?.key === "startDate" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-            </TableHead>
-            <TableHead>End Date</TableHead>
-            <TableHead
-              className="cursor-pointer"
-              onClick={() => handleSort("status")}>
-              Status {sortConfig?.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredAndSortedData.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell>{request.employeeName}</TableCell>
-              <TableCell>{request.leaveType}</TableCell>
-              <TableCell>{formatDate(request.requestDate)}</TableCell>
-              <TableCell>{formatDate(request.startDate)}</TableCell>
-              <TableCell>{formatDate(request.endDate)}</TableCell>
-              <TableCell>
-                <span
-                  className={cn("px-2 py-1 rounded-full text-sm font-medium", {
-                    "bg-green-100 text-green-800": request.status === "Approved",
-                    "bg-yellow-100 text-yellow-800": request.status === "Pending",
-                    "bg-red-100 text-red-800": request.status === "Rejected",
-                  })}>
-                  {request.status}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="container mx-auto py-8 px-4">
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Monitor All Requests ({mappedLeaveRequests.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {mappedLeaveRequests.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Days</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mappedLeaveRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">{request.id}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{request.userName}</div>
+                      <div className="text-xs text-gray-500">{request.userEmail}</div>
+                    </TableCell>
+                    <TableCell>{request.type}</TableCell>
+                    <TableCell>
+                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                    </TableCell>
+                    <TableCell>{request.numberOfDays}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
+                          request.status,
+                        )}`}>
+                        {getStatusDisplayText(request.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDate(request.submittedDate)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">No leave requests found</div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
