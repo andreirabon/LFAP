@@ -46,6 +46,7 @@ export const leaveRequests = pgTable("leave_requests", {
   supportingDoc: varchar("supporting_doc", { length: 255 }),
   managerComments: text("manager_comments"),
   managerId: integer("manager_id").references(() => users.id),
+  department: text("department"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

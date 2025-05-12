@@ -243,7 +243,9 @@ async function UserDataFetcher({ userId }: { userId: number }) {
                             ? "bg-orange-100 text-orange-800"
                             : "bg-red-100 text-red-800"
                         }`}>
-                        {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                        {leave.status === "tm_approved"
+                          ? "Approved"
+                          : leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
                       </span>
                     </TableCell>
                     <TableCell>{leave.createdAt}</TableCell>

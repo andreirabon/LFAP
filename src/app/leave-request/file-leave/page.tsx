@@ -80,6 +80,7 @@ export default function FileLeave() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const router = useRouter();
 
   // Fetch leave balances and user's sex
@@ -88,16 +89,22 @@ export default function FileLeave() {
       try {
         const response = await fetch("/api/leave-requests/leave-balances");
         if (!response.ok) {
-          throw new Error("Failed to fetch leave balances");
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.message || `Failed to fetch leave balances: ${response.status}`;
+          console.error("API Error:", errorMessage);
+          throw new Error(errorMessage);
         }
         const data = await response.json();
-        console.log("API Response:", data);
-        console.log("User Sex:", data.userSex);
-        console.log("Leave Balances:", data.leaveBalances);
+
+        if (!data.leaveBalances || !Array.isArray(data.leaveBalances)) {
+          console.error("Invalid API response format:", data);
+          throw new Error("Invalid leave balances data received from server");
+        }
+
         setLeaveBalances(data.leaveBalances);
       } catch (error) {
         console.error("Error fetching leave balances:", error);
-        toast.error("Failed to load leave balances");
+        toast.error(error instanceof Error ? error.message : "Failed to load leave balances");
       } finally {
         setIsLoadingBalances(false);
       }
@@ -116,8 +123,15 @@ export default function FileLeave() {
         }
         const data = await response.json();
 
+        console.log("Session data:", data); // Debug session data
+
         if (!data.isLoggedIn) {
           router.replace("/login");
+        } else {
+          // Store user department from the user object in the session response
+          const department = data.user?.department || null;
+          console.log("User department:", department); // Debug department value
+          setUserDepartment(department);
         }
       } catch (error) {
         console.error("Error checking auth:", error);
@@ -139,12 +153,12 @@ export default function FileLeave() {
   const selectedLeaveType = form.watch("leaveType");
   const selectedBalance = leaveBalances.find((balance) => balance.type === selectedLeaveType);
 
-  const handleFileAnother = () => {
+  const handleFileAnother = async () => {
     form.reset();
     setShowConfirmDialog(false);
     // Refresh leave balances
     setIsLoadingBalances(true);
-    fetchLeaveBalances();
+    await fetchLeaveBalances();
   };
 
   const handleViewStatus = () => {
@@ -155,13 +169,22 @@ export default function FileLeave() {
     try {
       const response = await fetch("/api/leave-requests/leave-balances");
       if (!response.ok) {
-        throw new Error("Failed to fetch leave balances");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Failed to fetch leave balances: ${response.status}`;
+        console.error("API Error:", errorMessage);
+        throw new Error(errorMessage);
       }
       const data = await response.json();
+
+      if (!data.leaveBalances || !Array.isArray(data.leaveBalances)) {
+        console.error("Invalid API response format:", data);
+        throw new Error("Invalid leave balances data received from server");
+      }
+
       setLeaveBalances(data.leaveBalances);
     } catch (error) {
       console.error("Error fetching leave balances:", error);
-      toast.error("Failed to load leave balances");
+      toast.error(error instanceof Error ? error.message : "Failed to load leave balances");
     } finally {
       setIsLoadingBalances(false);
     }
@@ -170,6 +193,8 @@ export default function FileLeave() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
+
+      console.log("Current department before submission:", userDepartment); // Debug department before sending
 
       // Handle file uploads first if any files are present
       let uploadedFileUrls: string[] = [];
@@ -192,19 +217,30 @@ export default function FileLeave() {
         uploadedFileUrls = uploadResult.fileUrls;
       }
 
+      // Ensure department is included in the payload
+      if (!userDepartment) {
+        console.warn("Warning: Department is not available for this request");
+      }
+
+      // Prepare payload with department
+      const payload = {
+        leaveType: values.leaveType,
+        startDate: values.dateRange.from.toISOString(),
+        endDate: values.dateRange.to.toISOString(),
+        reason: values.reason,
+        supportingDocs: uploadedFileUrls,
+        department: userDepartment || "Not assigned", // Use fallback if department is null
+      };
+
+      console.log("Sending payload with department:", payload); // Debug the full payload
+
       // Submit the leave request with file URLs
       const response = await fetch("/api/leave-requests/file-leave", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          leaveType: values.leaveType,
-          startDate: values.dateRange.from.toISOString(),
-          endDate: values.dateRange.to.toISOString(),
-          reason: values.reason,
-          supportingDocs: uploadedFileUrls,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -264,6 +300,16 @@ export default function FileLeave() {
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6">
+                {/* Department Field - Automatically populated and disabled */}
+                <div className="space-y-2">
+                  <FormLabel className="text-base font-medium">Department</FormLabel>
+                  <Input
+                    value={isCheckingAuth ? "Loading..." : userDepartment || "Not assigned"}
+                    disabled
+                    readOnly
+                    className="h-11 bg-muted/40 cursor-not-allowed"
+                  />
+                </div>
                 {/* Leave Type Selection */}
                 <FormField
                   control={form.control}

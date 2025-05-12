@@ -11,7 +11,8 @@ const leaveRequestSchema = z.object({
   startDate: z.string().transform((date) => parseLocalDate(date)),
   endDate: z.string().transform((date) => parseLocalDate(date)),
   reason: z.string().min(10).max(500),
-  supportingDoc: z.string().optional(),
+  supportingDocs: z.array(z.string()).optional(),
+  department: z.string().nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -24,7 +25,15 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate the request body
     const body = await request.json();
+    console.log("Received leave request body:", body); // Log the received request body
     const validatedData = leaveRequestSchema.parse(body);
+
+    // Get supporting doc if present
+    const supportingDoc = validatedData.supportingDocs?.length ? validatedData.supportingDocs[0] : undefined;
+
+    // Get department from request body, or use the session user's department as fallback
+    const department = validatedData.department || session.user.department || null;
+    console.log("Using department:", department); // Log the department being used
 
     // Insert the leave request into the database
     const newLeaveRequest = await db
@@ -35,7 +44,8 @@ export async function POST(request: NextRequest) {
         startDate: validatedData.startDate,
         endDate: validatedData.endDate,
         reason: validatedData.reason,
-        supportingDoc: validatedData.supportingDoc,
+        supportingDoc: supportingDoc,
+        department: department,
         status: "pending", // Default status for new requests
         createdAt: parseLocalDate(new Date().toISOString()),
       })

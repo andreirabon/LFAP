@@ -165,7 +165,8 @@ function calculateDuration(startDate: Date, endDate: Date): number {
 
 // Use the standard Next.js type for PATCH route handler
 export async function PATCH(request: Request, context: RouteHandlerParams<{ id: string }>): Promise<Response> {
-  const leaveRequestId = parseInt(context.params.id, 10);
+  const { params } = context;
+  const leaveRequestId = parseInt(params.id, 10);
 
   if (isNaN(leaveRequestId)) {
     return NextResponse.json({ error: "Invalid leave request ID" }, { status: 400 });

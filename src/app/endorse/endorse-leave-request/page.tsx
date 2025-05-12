@@ -88,15 +88,16 @@ export default function EndorseLeaveRequest() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
+        // Get current user session and details
         const authResponse = await fetch("/api/auth/session");
         if (!authResponse.ok) {
-          // Consider more specific error handling or logging
           throw new Error(`Session check failed: ${authResponse.status}`);
         }
         const authData = await authResponse.json();
@@ -106,12 +107,124 @@ export default function EndorseLeaveRequest() {
           return; // Exit early if not logged in
         }
 
+        // Fetch user's department - create a new dedicated endpoint for this
+        let currentUserDepartment = null;
+
+        try {
+          const userResponse = await fetch("/api/auth/session");
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            const userId = userData.userId;
+            console.log("Current user ID from session:", userId);
+
+            if (userId) {
+              // Make a direct query to get department
+              const deptResponse = await fetch(`/api/leave-requests/leave-balances`);
+
+              // Log raw response for debugging
+              const rawResponseText = await deptResponse.text();
+              console.log("Raw department API response:", rawResponseText);
+
+              // Parse JSON manually to avoid double consumption
+              let deptData;
+              try {
+                deptData = JSON.parse(rawResponseText);
+                console.log("Parsed department data:", deptData);
+
+                // Define helper function for finding department in nested objects
+                const findDepartment = (obj: Record<string, any>, depth = 0): string | null => {
+                  if (depth > 3) return null; // Prevent too deep recursion
+
+                  if (typeof obj !== "object" || obj === null) return null;
+
+                  if (obj.department) return obj.department;
+
+                  // Search in nested objects
+                  for (const key in obj) {
+                    if (typeof obj[key] === "object" && obj[key] !== null) {
+                      const result: string | null = findDepartment(obj[key], depth + 1);
+                      if (result) return result;
+                    }
+                  }
+
+                  return null;
+                };
+
+                // Check all possible locations for department information
+                if (typeof deptData === "object" && deptData !== null) {
+                  if (deptData.department) {
+                    currentUserDepartment = deptData.department;
+                    console.log("Found department at deptData.department:", currentUserDepartment);
+                  } else if (deptData.employee && deptData.employee.department) {
+                    currentUserDepartment = deptData.employee.department;
+                    console.log("Found department at deptData.employee.department:", currentUserDepartment);
+                  } else if (Array.isArray(deptData) && deptData[0] && deptData[0].department) {
+                    currentUserDepartment = deptData[0].department;
+                    console.log("Found department in array at deptData[0].department:", currentUserDepartment);
+                  } else {
+                    // Try deep search
+                    const foundDept = findDepartment(deptData);
+                    if (foundDept) {
+                      currentUserDepartment = foundDept;
+                      console.log("Found department through deep search:", currentUserDepartment);
+                    }
+                  }
+                }
+
+                // If still null, try an alternative endpoint for department info
+                if (!currentUserDepartment) {
+                  console.warn("Department not found in first API response, trying alternative endpoint...");
+
+                  try {
+                    // Try a different endpoint to get department info
+                    const altResponse = await fetch(`/api/subordinates/same-department`);
+
+                    if (altResponse.ok) {
+                      const altData = await altResponse.json();
+                      console.log("Alternative API response:", altData);
+
+                      // Check for department info in alt response (could be structured differently)
+                      if (Array.isArray(altData) && altData.length > 0 && altData[0].department) {
+                        currentUserDepartment = altData[0].department;
+                        console.log("Found department in alternative API:", currentUserDepartment);
+                      } else if (typeof altData === "object" && altData !== null) {
+                        // Try deep search again
+                        const foundAltDept = findDepartment(altData);
+                        if (foundAltDept) {
+                          currentUserDepartment = foundAltDept;
+                          console.log("Found department through deep search in alt API:", currentUserDepartment);
+                        }
+                      }
+                    }
+                  } catch (altError) {
+                    console.error("Error fetching from alternative endpoint:", altError);
+                  }
+                }
+
+                // If still null, log a warning with the full response
+                if (!currentUserDepartment) {
+                  console.warn("Department not found in any API response:", deptData);
+                }
+              } catch (parseError) {
+                console.error("Failed to parse department data:", parseError);
+              }
+            }
+          }
+        } catch (deptError) {
+          console.error("Error fetching department:", deptError);
+          // Continue execution even if department fetch fails
+        }
+
+        console.log("Final current user department:", currentUserDepartment);
+        setUserDepartment(currentUserDepartment);
+
         // Fetch leave requests if authenticated - now fetching both pending and tm_returned
         const pendingResponse = await fetch("/api/leave-requests/pending-endorsement");
         if (!pendingResponse.ok) {
           throw new Error(`Fetching pending leave requests failed: ${pendingResponse.status}`);
         }
         const pendingRequests: LeaveRequest[] = await pendingResponse.json();
+        console.log("Pending requests:", pendingRequests);
 
         // Fetch tm_returned requests
         const returnedResponse = await fetch("/api/leave-requests/tm-returned");
@@ -119,17 +232,85 @@ export default function EndorseLeaveRequest() {
           throw new Error(`Fetching returned leave requests failed: ${returnedResponse.status}`);
         }
         const tmReturnedRequests: LeaveRequest[] = await returnedResponse.json();
+        console.log("Returned requests:", tmReturnedRequests);
 
         // Combine both types of requests
         const allRequests = [...pendingRequests, ...tmReturnedRequests];
-        setRequests(allRequests);
-        setFilteredRequests(allRequests);
+        console.log("All requests before filtering:", allRequests);
+
+        // Log department values for debugging
+        allRequests.forEach((request) => {
+          console.log(
+            `Request ID ${request.id} - Employee: ${request.employee.firstName} ${request.employee.lastName}, Department: ${request.employee.department}`,
+          );
+        });
+
+        // If we have a department, filter by it, otherwise show all
+        let departmentRequests = allRequests;
+
+        if (currentUserDepartment) {
+          const normalizedManagerDept = currentUserDepartment.toLowerCase().trim();
+          console.log(`Filtering requests by normalized department: "${normalizedManagerDept}"`);
+
+          // Log all employee departments for debugging
+          console.log("All employee departments in requests:");
+          allRequests.forEach((req) => {
+            const empDept = req.employee?.department || "null";
+            console.log(`Request ${req.id}: "${empDept}"`);
+          });
+
+          // Use case-insensitive comparison and handle null values
+          departmentRequests = allRequests.filter((request) => {
+            // Handle possibility of null/undefined department
+            if (!request.employee || !request.employee.department) {
+              console.log(`Request ${request.id} - No department data, SKIPPING`);
+              return false;
+            }
+
+            const employeeDept = request.employee.department.toLowerCase().trim();
+
+            // Debug each comparison
+            console.log(`Request ${request.id} - Comparing: "${employeeDept}" vs "${normalizedManagerDept}"`);
+
+            // Check for exact match and partial match
+            const exactMatch = employeeDept === normalizedManagerDept;
+
+            // Sometimes departments might be stored with different formatting or abbreviations
+            // So we also check if one contains the other, but only when one is at least 3 chars
+            const partialMatch =
+              (normalizedManagerDept.length >= 3 && employeeDept.includes(normalizedManagerDept)) ||
+              (employeeDept.length >= 3 && normalizedManagerDept.includes(employeeDept));
+
+            // Use either exact or partial match
+            const isMatch = exactMatch || partialMatch;
+
+            if (isMatch) {
+              console.log(`Request ${request.id} - MATCH: ${exactMatch ? "exact" : "partial"}`);
+            } else {
+              console.log(`Request ${request.id} - NO MATCH`);
+            }
+
+            return isMatch;
+          });
+
+          console.log(`Filtered from ${allRequests.length} to ${departmentRequests.length} requests`);
+
+          // Force department filtering
+          setRequests(departmentRequests);
+          setFilteredRequests(departmentRequests);
+        } else {
+          console.warn("No department found for current user, showing all requests");
+
+          // Since department filtering is required, show a user-visible warning
+          toast.warning("Department information unavailable. Showing all requests.");
+
+          setRequests(departmentRequests);
+          setFilteredRequests(departmentRequests);
+        }
       } catch (error) {
         console.error("Error during auth check or data fetching:", error);
         setError(error instanceof Error ? error.message : "An unexpected error occurred");
         toast.error("Failed to load data. Please try refreshing the page.");
-        // Optionally, redirect to login for critical auth errors after toast
-        // if (error.message.includes("Session check failed")) router.replace("/login");
       } finally {
         setIsLoading(false);
       }
@@ -390,7 +571,11 @@ export default function EndorseLeaveRequest() {
       {/* Pending Requests List */}
       <Card>
         <CardHeader>
-          <CardTitle>Pending Endorsement and Returned Requests ({filteredRequests.length})</CardTitle>
+          <CardTitle>
+            {userDepartment
+              ? `${userDepartment} Department - Pending Endorsement and Returned Requests (${filteredRequests.length})`
+              : `Pending Endorsement and Returned Requests (${filteredRequests.length})`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

@@ -320,17 +320,19 @@ export default function NavigationBar() {
                 </NavigationMenuItem>
               )}
 
-              {/* Reports - Available for all roles */}
-              <NavigationMenuItem>
-                <NavigationMenuTrigger
-                  className={cn(
-                    "text-xs lg:text-sm px-2",
-                    pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
-                  )}>
-                  Reports
-                </NavigationMenuTrigger>
-                <ReportsContent />
-              </NavigationMenuItem>
+              {/* Reports - Available for HR Admin, Top Management, and Super Admin */}
+              {(user.role === "HR Admin" || user.role === "Top Management" || user.role === "Super Admin") && (
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger
+                    className={cn(
+                      "text-xs lg:text-sm px-2",
+                      pathname.startsWith("/reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                    )}>
+                    Reports
+                  </NavigationMenuTrigger>
+                  <ReportsContent />
+                </NavigationMenuItem>
+              )}
 
               {/* Approvals - Available for Top Management and Super Admin */}
               {(user.role === "Top Management" || user.role === "Super Admin") && (
@@ -543,40 +545,42 @@ export default function NavigationBar() {
                     </Link>
                   )}
 
-                  {/* Reports Section - Available for all roles */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Reports & Logs</h3>
-                    <div className="pl-2 space-y-2 flex flex-col">
-                      <Link
-                        href="/reports-and-logs/leave-history-report"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/reports-and-logs/leave-history-report"
-                            ? "text-primary"
-                            : "text-muted-foreground",
-                        )}>
-                        Leave History Report
-                      </Link>
-                      <Link
-                        href="/reports-and-logs/monthly-leave-util-report"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/reports-and-logs/monthly-leave-util-report"
-                            ? "text-primary"
-                            : "text-muted-foreground",
-                        )}>
-                        Monthly Leave Utilization
-                      </Link>
-                      <Link
-                        href="/reports-and-logs/approval-logs"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Approval Logs
-                      </Link>
+                  {/* Reports Section - Available for HR Admin, Top Management, and Super Admin roles */}
+                  {(user.role === "HR Admin" || user.role === "Top Management" || user.role === "Super Admin") && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Reports & Logs</h3>
+                      <div className="pl-2 space-y-2 flex flex-col">
+                        <Link
+                          href="/reports-and-logs/leave-history-report"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/leave-history-report"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          Leave History Report
+                        </Link>
+                        <Link
+                          href="/reports-and-logs/monthly-leave-util-report"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/monthly-leave-util-report"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          Monthly Leave Utilization
+                        </Link>
+                        <Link
+                          href="/reports-and-logs/approval-logs"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Approval Logs
+                        </Link>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Approvals Section */}
                   {(user.role === "Top Management" || user.role === "Super Admin") && (

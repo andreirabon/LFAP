@@ -144,7 +144,7 @@ const departmentColors: Record<string, { bg: string; text: string; hover: string
 };
 
 // Add color mapping for leave types
-const leaveTypeColors = {
+const leaveTypeColors: Record<string, string> = {
   "Sick Leave": "bg-red-100 text-red-800 hover:bg-red-100",
   "Vacation Leave": "bg-blue-100 text-blue-800 hover:bg-blue-100",
   "Mandatory/Force Leave": "bg-purple-100 text-purple-800 hover:bg-purple-100",
