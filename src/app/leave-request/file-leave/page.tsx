@@ -78,6 +78,8 @@ export default function FileLeave() {
   const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
 
   // Fetch leave balances and user's sex
@@ -106,6 +108,7 @@ export default function FileLeave() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      setIsCheckingAuth(true);
       try {
         const response = await fetch("/api/auth/session");
         if (!response.ok) {
@@ -118,7 +121,10 @@ export default function FileLeave() {
         }
       } catch (error) {
         console.error("Error checking auth:", error);
-        router.replace("/login");
+        setAuthError("Failed to verify authentication. Please try refreshing the page or login again.");
+        // We'll keep the user on the page but show the error
+      } finally {
+        setIsCheckingAuth(false);
       }
     };
 
@@ -225,189 +231,213 @@ export default function FileLeave() {
 
   return (
     <div className="container max-w-4xl mx-auto py-10 px-4 sm:px-6">
-      <Card className="shadow-md border-muted">
-        <CardHeader className="bg-muted/30">
-          <CardTitle className="text-2xl font-bold text-primary">File Leave Request</CardTitle>
-          <CardDescription className="text-muted-foreground">Submit a new leave request for approval</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 px-6 sm:px-8">
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6">
-              {/* Leave Type Selection */}
-              <FormField
-                control={form.control}
-                name="leaveType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Leave Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={isLoadingBalances}>
-                      <FormControl>
-                        <SelectTrigger className="h-11">
-                          <SelectValue
-                            placeholder={isLoadingBalances ? "Loading leave balances..." : "Select leave type"}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingBalances ? (
-                          <SelectItem
-                            value="loading"
-                            disabled>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
-                            Loading...
-                          </SelectItem>
-                        ) : (
-                          leaveBalances.map((leave) => (
-                            <SelectItem
-                              key={leave.type}
-                              value={leave.type}
-                              disabled={leave.remaining === 0}>
-                              <span className={cn("font-medium", leave.color)}>
-                                {leave.type}{" "}
-                                <span className="text-muted-foreground">({leave.remaining} days remaining)</span>
-                              </span>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Show selected leave information if available */}
-              {selectedBalance && (
-                <div className="rounded-md bg-muted/50 p-4 text-sm border border-muted mb-6">
-                  <p className="mb-1">
-                    <span className="font-medium">Selected Leave:</span> {selectedBalance.type}
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-medium">Total Days:</span> {selectedBalance.total}
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-medium">Used Days:</span> {selectedBalance.used}
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-medium">Remaining Days:</span> {selectedBalance.remaining}
-                  </p>
-                </div>
-              )}
-
-              {/* Date Selection */}
-              <FormField
-                control={form.control}
-                name="dateRange"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-base font-medium">Leave Duration</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+      {isCheckingAuth ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+          <span className="ml-3">Verifying your session...</span>
+        </div>
+      ) : authError ? (
+        <div className="bg-red-50 text-red-800 p-6 rounded-md mb-4">
+          <h3 className="text-lg font-medium mb-2">Authentication Error</h3>
+          <p>{authError}</p>
+          <div className="mt-4">
+            <Button
+              onClick={() => router.push("/login")}
+              className="bg-red-600 hover:bg-red-700 text-white mr-2">
+              Go to Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Card className="shadow-md border-muted">
+          <CardHeader className="bg-muted/30">
+            <CardTitle className="text-2xl font-bold text-primary">File Leave Request</CardTitle>
+            <CardDescription className="text-muted-foreground">Submit a new leave request for approval</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 px-6 sm:px-8">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6">
+                {/* Leave Type Selection */}
+                <FormField
+                  control={form.control}
+                  name="leaveType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Leave Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isLoadingBalances}>
                         <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full h-11 pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}>
-                            {field.value?.from ? (
-                              field.value.to ? (
-                                <>
-                                  {DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)} -{" "}
-                                  {DateTime.fromJSDate(field.value.to).toLocaleString(DateTime.DATE_FULL)}
-                                </>
-                              ) : (
-                                DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)
-                              )
-                            ) : (
-                              <span>Pick a date range</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger className="h-11">
+                            <SelectValue
+                              placeholder={isLoadingBalances ? "Loading leave balances..." : "Select leave type"}
+                            />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0"
-                        align="start">
-                        <Calendar
-                          mode="range"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={isDateDisabled}
-                          numberOfMonths={2}
-                          initialFocus
-                          className="rounded-md border shadow-sm"
+                        <SelectContent>
+                          {isLoadingBalances ? (
+                            <SelectItem
+                              value="loading"
+                              disabled>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                              Loading...
+                            </SelectItem>
+                          ) : (
+                            leaveBalances.map((leave) => (
+                              <SelectItem
+                                key={leave.type}
+                                value={leave.type}
+                                disabled={leave.remaining === 0}>
+                                <span className={cn("font-medium", leave.color)}>
+                                  {leave.type}{" "}
+                                  <span className="text-muted-foreground">({leave.remaining} days remaining)</span>
+                                </span>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Show selected leave information if available */}
+                {selectedBalance && (
+                  <div className="rounded-md bg-muted/50 p-4 text-sm border border-muted mb-6">
+                    <p className="mb-1">
+                      <span className="font-medium">Selected Leave:</span> {selectedBalance.type}
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-medium">Total Days:</span> {selectedBalance.total}
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-medium">Used Days:</span> {selectedBalance.used}
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-medium">Remaining Days:</span> {selectedBalance.remaining}
+                    </p>
+                  </div>
+                )}
+
+                {/* Date Selection */}
+                <FormField
+                  control={form.control}
+                  name="dateRange"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-base font-medium">Leave Duration</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full h-11 pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}>
+                              {field.value?.from ? (
+                                field.value.to ? (
+                                  <>
+                                    {DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)} -{" "}
+                                    {DateTime.fromJSDate(field.value.to).toLocaleString(DateTime.DATE_FULL)}
+                                  </>
+                                ) : (
+                                  DateTime.fromJSDate(field.value.from).toLocaleString(DateTime.DATE_FULL)
+                                )
+                              ) : (
+                                <span>Pick a date range</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-auto p-0"
+                          align="start">
+                          <Calendar
+                            mode="range"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={isDateDisabled}
+                            numberOfMonths={2}
+                            initialFocus
+                            className="rounded-md border shadow-sm"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Reason */}
+                <FormField
+                  control={form.control}
+                  name="reason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Reason for Leave</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Please provide a detailed reason for your leave request"
+                          className="resize-none min-h-[120px] shadow-sm"
+                          {...field}
                         />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Reason */}
-              <FormField
-                control={form.control}
-                name="reason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Reason for Leave</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Please provide a detailed reason for your leave request"
-                        className="resize-none min-h-[120px] shadow-sm"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* File Upload */}
+                <FormField
+                  control={form.control}
+                  name="supportingDocs"
+                  render={({ field: { onChange, ...field } }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Supporting Documents</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            onChange(files);
+                          }}
+                          {...field}
+                          value={undefined}
+                          className="h-11 shadow-sm"
+                        />
+                      </FormControl>
+                      <FormDescription>Upload any supporting documents (optional)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* File Upload */}
-              <FormField
-                control={form.control}
-                name="supportingDocs"
-                render={({ field: { onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Supporting Documents</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || []);
-                          onChange(files);
-                        }}
-                        {...field}
-                        value={undefined}
-                        className="h-11 shadow-sm"
-                      />
-                    </FormControl>
-                    <FormDescription>Upload any supporting documents (optional)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full sm:w-auto h-11 px-8 text-base font-medium bg-green-600 hover:bg-green-700 text-white transition-colors duration-200">
-                {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                Submit Leave Request
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto h-11 px-8 text-base font-medium bg-green-600 hover:bg-green-700 text-white transition-colors duration-200">
+                  {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                  Submit Leave Request
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Confirmation Dialog */}
       <AlertDialog

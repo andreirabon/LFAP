@@ -1,197 +1,195 @@
-"use client";
-
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+import db from "@/db/index";
+import { leaveRequests, users } from "@/db/schema";
+import { getSession } from "@/lib/session";
+import { desc, eq, inArray, or } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
-// Types
-interface ApprovalLog {
-  id: string;
-  requestType: string;
-  requesterName: string;
-  requestDate: string;
-  approverName: string;
-  approvalDate: string;
-  status: "Approved" | "Rejected" | "Pending";
-  comments?: string;
+// Database schema type (based on error messages)
+interface DbLeaveRequest {
+  id: number;
+  type: string;
+  startDate: Date;
+  endDate: Date;
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
+  createdAt: Date;
+  updatedAt: Date;
+  userId: number;
+  reason: string;
+  supportingDoc: string | null;
 }
 
-// Format date to local string
-const formatDate = (dateString: string) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString();
-};
+// User data type
+interface UserData {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
-// Sample data
-const sampleApprovalLogs: ApprovalLog[] = [
-  {
-    id: "REQ-001",
-    requestType: "Annual Leave",
-    requesterName: "John Doe",
-    requestDate: "2024-03-15",
-    approverName: "Jane Smith",
-    approvalDate: "2024-03-16",
-    status: "Approved",
-    comments: "Approved as requested",
-  },
-  {
-    id: "REQ-002",
-    requestType: "Sick Leave",
-    requesterName: "Alice Johnson",
-    requestDate: "2024-03-14",
-    approverName: "Bob Wilson",
-    approvalDate: "2024-03-14",
-    status: "Rejected",
-    comments: "Insufficient documentation",
-  },
-  {
-    id: "REQ-003",
-    requestType: "Annual Leave",
-    requesterName: "Charlie Brown",
-    requestDate: "2024-03-13",
-    approverName: "Diana Prince",
-    approvalDate: "2024-03-15",
-    status: "Approved",
-    comments: "Enjoy your vacation",
-  },
-  {
-    id: "REQ-004",
-    requestType: "Unpaid Leave",
-    requesterName: "Eve Anderson",
-    requestDate: "2024-03-12",
-    approverName: "Frank Miller",
-    approvalDate: "",
-    status: "Pending",
-    comments: "Under review",
-  },
-];
+// View model type for the UI
+interface LeaveRequest {
+  id: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  numberOfDays: number;
+  status: "pending" | "endorsed" | "rejected" | "returned" | "approved" | "tm_approved" | "tm_rejected" | "tm_returned";
+  submittedDate: string;
+  userName: string;
+  userEmail: string;
+}
 
-type SortConfig = {
-  key: keyof ApprovalLog;
-  direction: "asc" | "desc";
-} | null;
-
-export default function ApprovalLogsPage() {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
-
-  // Handle sorting
-  const handleSort = (key: keyof ApprovalLog) => {
-    setSortConfig((currentSort) => {
-      if (currentSort?.key === key) {
-        return {
-          key,
-          direction: currentSort.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return { key, direction: "asc" };
-    });
+function getStatusColor(status: LeaveRequest["status"]) {
+  const colors = {
+    pending: "bg-yellow-100 text-yellow-800",
+    endorsed: "bg-blue-100 text-blue-800",
+    approved: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    returned: "bg-orange-100 text-orange-800",
+    tm_approved: "bg-emerald-100 text-emerald-800",
+    tm_rejected: "bg-rose-100 text-rose-800",
+    tm_returned: "bg-amber-100 text-amber-800",
   };
+  return colors[status];
+}
 
-  // Filter and sort data
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = [...sampleApprovalLogs];
+function getStatusDisplayText(status: LeaveRequest["status"]) {
+  const displayText = {
+    pending: "Waiting to be Endorsed by Manager",
+    endorsed: "Endorsed by the Manager",
+    approved: "Approved by the Manager",
+    rejected: "Rejected by the Manager",
+    returned: "Returned by the Manager",
+    tm_approved: "Approved by the Top Management",
+    tm_rejected: "Rejected by the Top Management",
+    tm_returned: "Returned by the Top Management",
+  };
+  return displayText[status];
+}
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((log) => log.status === statusFilter);
-    }
+function formatDate(date: Date | string) {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return dateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-    // Apply sorting
-    if (sortConfig) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
+function calculateDays(startDate: Date, endDate: Date): number {
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
 
-        if (aValue !== undefined && bValue !== undefined) {
-          if (aValue < bValue) {
-            return sortConfig.direction === "asc" ? -1 : 1;
-          }
-          if (aValue > bValue) {
-            return sortConfig.direction === "asc" ? 1 : -1;
-          }
-        }
-        return 0;
-      });
-    }
+function mapDbToViewLeaveRequest(dbRequest: DbLeaveRequest, usersMap: Map<number, UserData>): LeaveRequest {
+  const user = usersMap.get(dbRequest.userId);
+  const userName = user ? `${user.firstName} ${user.lastName}` : "Unknown User";
 
-    return filtered;
-  }, [statusFilter, sortConfig]);
+  return {
+    id: dbRequest.id.toString(),
+    type: dbRequest.type,
+    startDate: dbRequest.startDate.toISOString(),
+    endDate: dbRequest.endDate.toISOString(),
+    numberOfDays: calculateDays(dbRequest.startDate, dbRequest.endDate),
+    status: dbRequest.status,
+    submittedDate: dbRequest.createdAt.toISOString(),
+    userName,
+    userEmail: user?.email || "No Email",
+  };
+}
+
+export default async function ApprovalLogs() {
+  const session = await getSession();
+
+  if (!session.isLoggedIn) {
+    redirect("/login");
+  }
+
+  // Fetch all tm_approved and endorsed leave requests
+  const allApprovedRequests = (await db
+    .select()
+    .from(leaveRequests)
+    .where(or(eq(leaveRequests.status, "tm_approved"), eq(leaveRequests.status, "endorsed")))
+    .orderBy(desc(leaveRequests.createdAt))) as DbLeaveRequest[];
+
+  // Extract all unique user IDs from the requests
+  const userIds = [...new Set(allApprovedRequests.map((request) => request.userId))];
+
+  // Only try to fetch user data if we have any requests
+  let usersMap = new Map<number, UserData>();
+
+  if (userIds.length > 0) {
+    // Fetch user data for these users using the inArray operator
+    const usersData = (await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(users)
+      .where(inArray(users.id, userIds))) as UserData[];
+
+    // Create a map of user id to user data for easy lookup
+    usersData.forEach((user) => {
+      usersMap.set(user.id, user);
+    });
+  }
+
+  // Map database results to view model
+  const mappedLeaveRequests = allApprovedRequests.map((request) => mapDbToViewLeaveRequest(request, usersMap));
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Approval Logs</CardTitle>
+    <div className="container mx-auto py-8 px-4">
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>All Approved & Endorsed Requests ({mappedLeaveRequests.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Filter Controls */}
-          <div className="mb-6">
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Approval Logs Table */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Request ID</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Requester</TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("requestDate")}>
-                  Request Date {sortConfig?.key === "requestDate" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead>Approver</TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("approvalDate")}>
-                  Approval Date {sortConfig?.key === "approvalDate" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("status")}>
-                  Status {sortConfig?.key === "status" && (sortConfig.direction === "asc" ? "↑" : "↓")}
-                </TableHead>
-                <TableHead>Comments</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedData.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="font-medium">{log.id}</TableCell>
-                  <TableCell>{log.requestType}</TableCell>
-                  <TableCell>{log.requesterName}</TableCell>
-                  <TableCell>{formatDate(log.requestDate)}</TableCell>
-                  <TableCell>{log.approverName}</TableCell>
-                  <TableCell>{formatDate(log.approvalDate)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        log.status === "Approved" ? "default" : log.status === "Rejected" ? "destructive" : "secondary"
-                      }>
-                      {log.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">{log.comments || "—"}</TableCell>
+          {mappedLeaveRequests.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Days</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submitted</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {mappedLeaveRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">{request.id}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{request.userName}</div>
+                      <div className="text-xs text-gray-500">{request.userEmail}</div>
+                    </TableCell>
+                    <TableCell>{request.type}</TableCell>
+                    <TableCell>
+                      {formatDate(request.startDate)} - {formatDate(request.endDate)}
+                    </TableCell>
+                    <TableCell>{request.numberOfDays}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(
+                          request.status,
+                        )}`}>
+                        {getStatusDisplayText(request.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDate(request.submittedDate)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-gray-500">No approved or endorsed requests found</div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -163,7 +163,7 @@ export default function EndorseLeaveRequest() {
   };
 
   // Action types matching DB statuses
-  type ActionDbStatus = "approved" | "rejected" | "returned" | "endorsed" | "tm_returned";
+  type ActionDbStatus = "rejected" | "returned" | "endorsed" | "tm_returned";
 
   // Validate comments based on action type
   const validateComments = (action: ActionDbStatus, comments: string): boolean => {
@@ -357,29 +357,6 @@ export default function EndorseLeaveRequest() {
     // Don't need to clear dialogAction immediately as it won't affect UI once dialog is closed
   };
 
-  const renderLoadingSkeleton = () => (
-    <div className="container mx-auto py-8 px-4 space-y-6">
-      <Skeleton className="h-10 w-64 mb-6" />
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  if (isLoading) {
-    return renderLoadingSkeleton();
-  }
-
   return (
     <div className="container mx-auto py-8 px-4 space-y-6">
       <h1 className="text-2xl font-bold">Endorse Leave Requests</h1>
@@ -416,25 +393,57 @@ export default function EndorseLeaveRequest() {
           <CardTitle>Pending Endorsement and Returned Requests ({filteredRequests.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredRequests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? "No matching requests found" : "No pending or returned requests at this time"}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>End Date</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableCell
+                    colSpan={7}
+                    className="h-24 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="animate-spin h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                      <span className="ml-2">Loading...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => (
+              ) : error ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="h-24 text-center">
+                    <div className="text-red-500">
+                      <p>Error loading requests: {error}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => window.location.reload()}>
+                        Try Again
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredRequests.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="h-24 text-center text-muted-foreground">
+                    {searchTerm ? "No matching requests found" : "No pending or returned requests at this time"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRequests.map((request) => (
                   <TableRow
                     key={request.id}
                     className={`cursor-pointer hover:bg-muted/50 ${
@@ -457,10 +466,10 @@ export default function EndorseLeaveRequest() {
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

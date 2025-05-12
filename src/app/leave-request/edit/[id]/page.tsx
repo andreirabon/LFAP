@@ -79,6 +79,8 @@ export default function EditLeaveRequest() {
   const [isLoadingBalances, setIsLoadingBalances] = useState(true);
   const [isLoadingRequest, setIsLoadingRequest] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -156,10 +158,12 @@ export default function EditLeaveRequest() {
   // Check auth session
   useEffect(() => {
     const checkAuth = async () => {
+      setIsCheckingAuth(true);
+      setAuthError(null);
       try {
         const response = await fetch("/api/auth/session");
         if (!response.ok) {
-          throw new Error("Failed to fetch session");
+          throw new Error(`Failed to fetch session: ${response.status}`);
         }
         const data = await response.json();
 
@@ -168,7 +172,10 @@ export default function EditLeaveRequest() {
         }
       } catch (error) {
         console.error("Error checking auth:", error);
-        router.replace("/login");
+        setAuthError(error instanceof Error ? error.message : "An unexpected error occurred");
+        // We'll keep the user on the page but show the error
+      } finally {
+        setIsCheckingAuth(false);
       }
     };
 
@@ -240,6 +247,38 @@ export default function EditLeaveRequest() {
     const checkDate = DateTime.fromJSDate(date);
     return checkDate < today || checkDate.weekday > 5; // Disable weekends and past dates
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+        <span className="ml-3">Verifying your session...</span>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="container max-w-4xl mx-auto py-10 px-4 sm:px-6">
+        <div className="bg-red-50 text-red-800 p-6 rounded-md mb-4">
+          <h3 className="text-lg font-medium mb-2">Authentication Error</h3>
+          <p>{authError}</p>
+          <div className="mt-4">
+            <Button
+              onClick={() => router.push("/login")}
+              className="bg-red-600 hover:bg-red-700 text-white mr-2">
+              Go to Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoadingRequest) {
     return (

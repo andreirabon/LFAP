@@ -136,7 +136,7 @@ async function UserDataFetcher({ userId }: { userId: number }) {
       createdAt: leaveRequests.createdAt,
     })
     .from(leaveRequests)
-    .where(and(eq(leaveRequests.userId, userId), eq(leaveRequests.status, "approved")))
+    .where(and(eq(leaveRequests.userId, userId), eq(leaveRequests.status, "tm_approved")))
     .orderBy(leaveRequests.createdAt);
 
   const leaveHistory: UserLeaveHistory[] = approvedLeavesResult.map((leave) => ({
@@ -233,7 +233,7 @@ async function UserDataFetcher({ userId }: { userId: number }) {
                     <TableCell>
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          leave.status === "approved"
+                          leave.status === "tm_approved"
                             ? "bg-green-100 text-green-800"
                             : leave.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"

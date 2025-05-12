@@ -62,21 +62,25 @@ export default function PendingApprovals() {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Fetch endorsed leave requests when component mounts
   useEffect(() => {
     const fetchEndorsedRequests = async () => {
+      setIsLoading(true);
+      setFetchError(null);
       try {
         const response = await fetch("/api/leave-requests/endorsed");
         if (!response.ok) {
-          throw new Error("Failed to fetch endorsed requests");
+          throw new Error(`Failed to fetch endorsed requests. Status: ${response.status}`);
         }
         const data = await response.json();
         setEndorsedRequests(data);
-        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching endorsed leave requests:", error);
+        setFetchError(error instanceof Error ? error.message : "An unexpected error occurred");
         toast.error("Failed to load endorsed leave requests");
+      } finally {
         setIsLoading(false);
       }
     };
@@ -247,6 +251,23 @@ export default function PendingApprovals() {
                   <div className="flex justify-center items-center">
                     <div className="animate-spin h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full"></div>
                     <span className="ml-2">Loading...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : fetchError ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="h-24 text-center">
+                  <div className="text-red-500 space-y-2">
+                    <p>Error: {fetchError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                      className="border-red-300 hover:bg-red-50">
+                      Retry
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

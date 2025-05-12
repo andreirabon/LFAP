@@ -195,13 +195,17 @@ export default function NavigationBar() {
     avatar: null,
     isLoggedIn: false,
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSession = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const response = await fetch("/api/auth/session");
         if (!response.ok) {
-          throw new Error("Failed to fetch session");
+          throw new Error(`Failed to fetch session: ${response.status}`);
         }
         const data = await response.json();
 
@@ -222,12 +226,15 @@ export default function NavigationBar() {
         }
       } catch (error) {
         console.error("Failed to fetch session:", error);
+        setError(error instanceof Error ? error.message : "An unexpected error occurred");
         setUser({
           name: "",
           role: "Employee",
           avatar: null,
           isLoggedIn: false,
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -359,7 +366,21 @@ export default function NavigationBar() {
 
         {/* User Profile Dropdown */}
         <div className="hidden md:flex md:items-center md:space-x-4">
-          {user.isLoggedIn ? (
+          {isLoading ? (
+            <Button
+              variant="ghost"
+              className="relative h-8 flex items-center space-x-2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <span className="text-xs">Loading...</span>
+            </Button>
+          ) : error ? (
+            <Button
+              variant="ghost"
+              className="relative h-8 flex items-center space-x-2 text-red-500"
+              onClick={() => window.location.reload()}>
+              <span className="text-xs">Error: Retry</span>
+            </Button>
+          ) : user.isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -400,205 +421,226 @@ export default function NavigationBar() {
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden flex-1 justify-end">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-80">
-              <div className="flex flex-col space-y-4 mt-6">
-                {/* Leave Request Section */}
-                {(user.role === "Employee" ||
-                  user.role === "Manager" ||
-                  user.role === "HR Admin" ||
-                  user.role === "Super Admin") && (
+          {isLoading ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            </Button>
+          ) : error ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-500"
+              onClick={() => window.location.reload()}>
+              <span className="text-xs">!</span>
+            </Button>
+          ) : (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="w-80">
+                <div className="flex flex-col space-y-4 mt-6">
+                  {/* Leave Request Section */}
+                  {(user.role === "Employee" ||
+                    user.role === "Manager" ||
+                    user.role === "HR Admin" ||
+                    user.role === "Super Admin") && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Leave Request</h3>
+                      <div className="pl-2 space-y-2 flex flex-col">
+                        <Link
+                          href="/leave-request/personal-information"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/leave-request/personal-information"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          Personal Information
+                        </Link>
+                        <Link
+                          href="/leave-request/file-leave"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/leave-request/file-leave" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          File Leave
+                        </Link>
+                        <Link
+                          href="/leave-request/view-leave-balances"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/leave-request/view-leave-balances"
+                              ? "text-primary"
+                              : "text-muted-foreground",
+                          )}>
+                          View Leave Balances
+                        </Link>
+                        <Link
+                          href="/leave-request/track-status"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/leave-request/track-status" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Track Status
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Endorsements Section */}
+                  {(user.role === "Manager" || user.role === "Super Admin") && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Endorsements</h3>
+                      <div className="pl-2 space-y-2 flex flex-col">
+                        <Link
+                          href="/endorse/team-calendar"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/endorse/team-calendar" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          View Team Calendar
+                        </Link>
+                        <Link
+                          href="/endorse/endorse-leave-request"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/endorse/endorse-leave-request" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Endorse Leave Request
+                        </Link>
+                        <Link
+                          href="/endorse/view-leave-balances"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/endorse/view-leave-balances" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          View Leave Balances
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Leave Balance Section */}
+                  {(user.role === "HR Admin" || user.role === "Super Admin") && (
+                    <Link
+                      href="/leave-balance-management"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-primary",
+                        pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
+                      )}>
+                      Leave Balance Management
+                    </Link>
+                  )}
+
+                  {/* Reports Section - Available for all roles */}
                   <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Leave Request</h3>
+                    <h3 className="text-sm font-medium">Reports & Logs</h3>
                     <div className="pl-2 space-y-2 flex flex-col">
                       <Link
-                        href="/leave-request/personal-information"
+                        href="/reports-and-logs/leave-history-report"
                         className={cn(
                           "text-sm transition-colors hover:text-primary",
-                          pathname === "/leave-request/personal-information" ? "text-primary" : "text-muted-foreground",
+                          pathname === "/reports-and-logs/leave-history-report"
+                            ? "text-primary"
+                            : "text-muted-foreground",
                         )}>
-                        Personal Information
+                        Leave History Report
                       </Link>
                       <Link
-                        href="/leave-request/file-leave"
+                        href="/reports-and-logs/monthly-leave-util-report"
                         className={cn(
                           "text-sm transition-colors hover:text-primary",
-                          pathname === "/leave-request/file-leave" ? "text-primary" : "text-muted-foreground",
+                          pathname === "/reports-and-logs/monthly-leave-util-report"
+                            ? "text-primary"
+                            : "text-muted-foreground",
                         )}>
-                        File Leave
+                        Monthly Leave Utilization
                       </Link>
                       <Link
-                        href="/leave-request/view-leave-balances"
+                        href="/reports-and-logs/approval-logs"
                         className={cn(
                           "text-sm transition-colors hover:text-primary",
-                          pathname === "/leave-request/view-leave-balances" ? "text-primary" : "text-muted-foreground",
+                          pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
                         )}>
-                        View Leave Balances
-                      </Link>
-                      <Link
-                        href="/leave-request/track-status"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/leave-request/track-status" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Track Status
+                        Approval Logs
                       </Link>
                     </div>
                   </div>
-                )}
 
-                {/* Endorsements Section */}
-                {(user.role === "Manager" || user.role === "Super Admin") && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Endorsements</h3>
-                    <div className="pl-2 space-y-2 flex flex-col">
-                      <Link
-                        href="/endorse/team-calendar"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/endorse/team-calendar" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        View Team Calendar
-                      </Link>
-                      <Link
-                        href="/endorse/endorse-leave-request"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/endorse/endorse-leave-request" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Endorse Leave Request
-                      </Link>
-                      <Link
-                        href="/endorse/view-leave-balances"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/endorse/view-leave-balances" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        View Leave Balances
-                      </Link>
+                  {/* Approvals Section */}
+                  {(user.role === "Top Management" || user.role === "Super Admin") && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Approvals</h3>
+                      <div className="pl-2 space-y-2 flex flex-col">
+                        <Link
+                          href="/approvals/pending-approvals"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/approvals/pending-approvals" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Pending Approvals
+                        </Link>
+                        <Link
+                          href="/approvals/approved-approvals"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/approvals/approved-approvals" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Approved Approvals
+                        </Link>
+                        <Link
+                          href="/approvals/rejected-approvals"
+                          className={cn(
+                            "text-sm transition-colors hover:text-primary",
+                            pathname === "/approvals/rejected-approvals" ? "text-primary" : "text-muted-foreground",
+                          )}>
+                          Rejected Approvals
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Leave Balance Section */}
-                {(user.role === "HR Admin" || user.role === "Super Admin") && (
+                  {/* Audit Trail - Available for all roles */}
                   <Link
-                    href="/leave-balance-management"
+                    href="/audit-trail"
                     className={cn(
                       "text-sm font-medium transition-colors hover:text-primary",
-                      pathname === "/leave-balance-management" ? "text-primary" : "text-muted-foreground",
+                      pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
                     )}>
-                    Leave Balance Management
+                    Audit Trail
                   </Link>
-                )}
 
-                {/* Reports Section - Available for all roles */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Reports & Logs</h3>
-                  <div className="pl-2 space-y-2 flex flex-col">
-                    <Link
-                      href="/reports-and-logs/leave-history-report"
-                      className={cn(
-                        "text-sm transition-colors hover:text-primary",
-                        pathname === "/reports-and-logs/leave-history-report"
-                          ? "text-primary"
-                          : "text-muted-foreground",
-                      )}>
-                      Leave History Report
-                    </Link>
-                    <Link
-                      href="/reports-and-logs/monthly-leave-util-report"
-                      className={cn(
-                        "text-sm transition-colors hover:text-primary",
-                        pathname === "/reports-and-logs/monthly-leave-util-report"
-                          ? "text-primary"
-                          : "text-muted-foreground",
-                      )}>
-                      Monthly Leave Utilization
-                    </Link>
-                    <Link
-                      href="/reports-and-logs/approval-logs"
-                      className={cn(
-                        "text-sm transition-colors hover:text-primary",
-                        pathname === "/reports-and-logs/approval-logs" ? "text-primary" : "text-muted-foreground",
-                      )}>
-                      Approval Logs
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Approvals Section */}
-                {(user.role === "Top Management" || user.role === "Super Admin") && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Approvals</h3>
-                    <div className="pl-2 space-y-2 flex flex-col">
-                      <Link
-                        href="/approvals/pending-approvals"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/approvals/pending-approvals" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Pending Approvals
-                      </Link>
-                      <Link
-                        href="/approvals/approved-approvals"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/approvals/approved-approvals" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Approved Approvals
-                      </Link>
-                      <Link
-                        href="/approvals/rejected-approvals"
-                        className={cn(
-                          "text-sm transition-colors hover:text-primary",
-                          pathname === "/approvals/rejected-approvals" ? "text-primary" : "text-muted-foreground",
-                        )}>
-                        Rejected Approvals
-                      </Link>
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex flex-col space-y-1 mb-4">
+                      <p className="text-sm font-medium">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.role}</p>
                     </div>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      size="sm"
+                      asChild>
+                      <Link href="/api/auth/logout">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </Link>
+                    </Button>
                   </div>
-                )}
-
-                {/* Audit Trail - Available for all roles */}
-                <Link
-                  href="/audit-trail"
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
-                    pathname === "/audit-trail" ? "text-primary" : "text-muted-foreground",
-                  )}>
-                  Audit Trail
-                </Link>
-
-                <div className="border-t pt-4 mt-4">
-                  <div className="flex flex-col space-y-1 mb-4">
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.role}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    size="sm"
-                    asChild>
-                    <Link href="/api/auth/logout">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </Link>
-                  </Button>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </nav>
     </header>

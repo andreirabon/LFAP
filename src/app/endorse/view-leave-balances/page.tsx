@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useDebounce } from "@/lib/hooks";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -60,6 +61,8 @@ function ViewLeaveBalancesContent() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(!!searchQuery);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
@@ -81,10 +84,12 @@ function ViewLeaveBalancesContent() {
   // Check authentication and get user data
   useEffect(() => {
     const checkAuth = async () => {
+      setIsAuthChecking(true);
+      setAuthError(null);
       try {
         const response = await fetch("/api/auth/session");
         if (!response.ok) {
-          throw new Error("Failed to fetch session");
+          throw new Error(`Failed to fetch session: ${response.status}`);
         }
         const data = await response.json();
 
@@ -101,7 +106,10 @@ function ViewLeaveBalancesContent() {
         }
       } catch (error) {
         console.error("Error checking auth:", error);
-        router.replace("/login");
+        setAuthError(error instanceof Error ? error.message : "An unexpected error occurred");
+        // Don't redirect immediately on error, show the error instead
+      } finally {
+        setIsAuthChecking(false);
       }
     };
 
@@ -356,118 +364,137 @@ function ViewLeaveBalancesContent() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">View Subordinate Leave Balances</h1>
-      {currentUser?.department && (
-        <div className="mb-4">
-          <p className="text-md text-gray-600">
-            Department: <span className="font-medium">{currentUser.department}</span>
-          </p>
-          {currentUser.role !== "Super Admin" && (
-            <p className="text-sm text-amber-600 mt-1">
-              <strong>Important:</strong> You can only view subordinates from your department.
-            </p>
-          )}
+    <div className="container mx-auto py-8 px-4">
+      {isAuthChecking ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+          <span className="ml-3">Verifying your session...</span>
         </div>
-      )}
-
-      {/* Search Section */}
-      <div className="flex gap-4 mb-8">
-        <div className="relative flex-1">
-          <Input
-            type="text"
-            placeholder={
-              currentUser?.role === "Super Admin"
-                ? "Search by name or ID"
-                : `Search for ${currentUser?.department} subordinates only`
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10 w-full"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && searchTerm.trim()) {
-                handleSearch();
-              }
-            }}
-          />
-          {searchTerm && (
-            <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              onClick={handleClearSearch}>
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <Button
-          onClick={handleSearch}
-          disabled={!searchTerm.trim()}>
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
-      </div>
-
-      {/* Results Section */}
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-          <p className="mt-2 text-gray-600">Loading subordinates...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center py-8 text-red-600">{error}</div>
-      ) : !hasSearched || !searchTerm.trim() ? (
-        <div className="text-center py-12">
-          <div className="mb-4 text-gray-500">
-            <Search className="h-12 w-12 mx-auto opacity-30" />
-          </div>
-          <h3 className="text-xl font-medium mb-2">Enter a search term to find subordinates</h3>
-          <p className="text-gray-600">Search by name or ID to view leave balances of your team members</p>
-        </div>
-      ) : subordinates.length > 0 ? (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Subordinates ({subordinates.length})</h2>
-          <div className="space-y-6">
-            {subordinates.map((subordinate) => (
-              <Card
-                key={subordinate.id}
-                className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-center">
-                    {subordinate.firstName} {subordinate.lastName}
-                  </CardTitle>
-                  {subordinate.department && (
-                    <p className="text-center text-sm text-gray-500">Department: {subordinate.department}</p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div>
-                    <div className="flex flex-col space-y-2"></div>
-                    <hr className="my-2 border-gray-200" />
-                    <div>
-                      <h4 className="font-medium mb-3 text-sm">Leave Balances</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {subordinate.leaveBalances.map((leave) => (
-                          <div
-                            key={leave.type}
-                            className="flex flex-col items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
-                            <Badge
-                              variant="secondary"
-                              className={`mb-1 font-normal ${getBadgeColor(leave.type)}`}>
-                              {leave.type}
-                            </Badge>
-                            <span className="text-xl font-semibold">{leave.remaining}</span>
-                            <span className="text-xs text-gray-500">{leave.unit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      ) : authError ? (
+        <div className="bg-red-50 text-red-800 p-6 rounded-md mb-4">
+          <h3 className="text-lg font-medium mb-2">Authentication Error</h3>
+          <p>{authError}</p>
+          <div className="mt-4">
+            <Button
+              onClick={() => router.push("/login")}
+              className="bg-red-600 hover:bg-red-700 text-white mr-2">
+              Go to Login
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
           </div>
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-600">No subordinates found matching &apos;{searchTerm}&apos;</div>
+        <>
+          <h1 className="text-2xl font-bold mb-6">View Leave Balances of Subordinates</h1>
+
+          {/* Search Interface */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="search-employee">Search Employees</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search-employee"
+                      placeholder="Search by name or department..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser?.role === "Manager"
+                      ? "As a manager, you can only view subordinates in your department."
+                      : "Enter the name or department of the employee."}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSearch}
+                    disabled={!searchTerm.trim()}>
+                    Search
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleClearSearch}>
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Results Section */}
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              <p className="mt-2 text-gray-600">Loading subordinates...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          ) : !hasSearched || !searchTerm.trim() ? (
+            <div className="text-center py-12">
+              <div className="mb-4 text-gray-500">
+                <Search className="h-12 w-12 mx-auto opacity-30" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">Enter a search term to find subordinates</h3>
+              <p className="text-gray-600">Search by name or ID to view leave balances of your team members</p>
+            </div>
+          ) : subordinates.length > 0 ? (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Subordinates ({subordinates.length})</h2>
+              <div className="space-y-6">
+                {subordinates.map((subordinate) => (
+                  <Card
+                    key={subordinate.id}
+                    className="overflow-hidden hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-center">
+                        {subordinate.firstName} {subordinate.lastName}
+                      </CardTitle>
+                      {subordinate.department && (
+                        <p className="text-center text-sm text-gray-500">Department: {subordinate.department}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div>
+                        <div className="flex flex-col space-y-2"></div>
+                        <hr className="my-2 border-gray-200" />
+                        <div>
+                          <h4 className="font-medium mb-3 text-sm">Leave Balances</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {subordinate.leaveBalances.map((leave) => (
+                              <div
+                                key={leave.type}
+                                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                <Badge
+                                  variant="secondary"
+                                  className={`mb-1 font-normal ${getBadgeColor(leave.type)}`}>
+                                  {leave.type}
+                                </Badge>
+                                <span className="text-xl font-semibold">{leave.remaining}</span>
+                                <span className="text-xs text-gray-500">{leave.unit}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-600">
+              No subordinates found matching &apos;{searchTerm}&apos;
+            </div>
+          )}
+        </>
       )}
     </div>
   );

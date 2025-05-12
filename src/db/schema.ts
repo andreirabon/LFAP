@@ -5,7 +5,6 @@ export const leaveStatusEnum = pgEnum("leave_status", [
   "endorsed",
   "rejected",
   "returned",
-  "approved",
   "tm_approved",
   "tm_rejected",
   "tm_returned",

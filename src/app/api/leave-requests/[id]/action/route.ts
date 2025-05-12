@@ -25,7 +25,7 @@ async function sendNotificationEmail(email: string, subject: string, message: st
 // Define a schema for the request body
 const actionSchema = z
   .object({
-    action: z.enum(["approved", "rejected", "returned", "endorsed", "tm_approved", "tm_rejected", "tm_returned"]),
+    action: z.enum(["rejected", "returned", "endorsed", "tm_approved", "tm_rejected", "tm_returned"]),
     managerComments: z.string().optional(),
     managerId: z.number().optional(), // Manager or top management ID
   })
