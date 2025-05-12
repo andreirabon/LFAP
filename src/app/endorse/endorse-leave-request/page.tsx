@@ -132,17 +132,17 @@ export default function EndorseLeaveRequest() {
                 console.log("Parsed department data:", deptData);
 
                 // Define helper function for finding department in nested objects
-                const findDepartment = (obj: Record<string, any>, depth = 0): string | null => {
+                const findDepartment = (obj: Record<string, unknown>, depth = 0): string | null => {
                   if (depth > 3) return null; // Prevent too deep recursion
 
                   if (typeof obj !== "object" || obj === null) return null;
 
-                  if (obj.department) return obj.department;
+                  if (obj.department) return obj.department as string;
 
                   // Search in nested objects
                   for (const key in obj) {
                     if (typeof obj[key] === "object" && obj[key] !== null) {
-                      const result: string | null = findDepartment(obj[key], depth + 1);
+                      const result: string | null = findDepartment(obj[key] as Record<string, unknown>, depth + 1);
                       if (result) return result;
                     }
                   }

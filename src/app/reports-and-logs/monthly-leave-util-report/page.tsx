@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 interface DepartmentData {
   department: string;
@@ -175,6 +175,26 @@ const MONTHS = [
 ];
 
 export default function MonthlyLeaveUtilReportPage() {
+  return (
+    <Suspense fallback={<ReportSkeleton />}>
+      <MonthlyLeaveUtilReport />
+    </Suspense>
+  );
+}
+
+function ReportSkeleton() {
+  return (
+    <div className="container mx-auto py-8 space-y-6">
+      <h1 className="text-2xl font-bold">Monthly Leave Utilization Report</h1>
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    </div>
+  );
+}
+
+function MonthlyLeaveUtilReport() {
   const searchParams = useSearchParams();
   const router = useRouter();
 

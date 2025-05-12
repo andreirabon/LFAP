@@ -18,7 +18,7 @@ declare module "excellentexport" {
     name: string;
     from: {
       table?: string;
-      data?: any[];
+      data?: unknown[][];
     };
   }
 
