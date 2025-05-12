@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface DepartmentData {
   department: string;
@@ -144,9 +144,9 @@ const departmentColors: Record<string, { bg: string; text: string; hover: string
 };
 
 // Add color mapping for leave types
-const leaveTypeColors: Record<string, string> = {
-  "Vacation Leave": "bg-blue-100 text-blue-800 hover:bg-blue-100",
+const leaveTypeColors = {
   "Sick Leave": "bg-red-100 text-red-800 hover:bg-red-100",
+  "Vacation Leave": "bg-blue-100 text-blue-800 hover:bg-blue-100",
   "Mandatory/Force Leave": "bg-purple-100 text-purple-800 hover:bg-purple-100",
   "Special Privilege Leave": "bg-green-100 text-green-800 hover:bg-green-100",
   "Maternity Leave": "bg-pink-100 text-pink-800 hover:bg-pink-100",
@@ -154,10 +154,6 @@ const leaveTypeColors: Record<string, string> = {
   // Default color for any new leave types
   default: "bg-gray-100 text-gray-800 hover:bg-gray-100",
 };
-
-function getDepartmentColor(department: string) {
-  return departmentColors[department] || departmentColors.default;
-}
 
 function getLeaveTypeColor(leaveType: string) {
   return leaveTypeColors[leaveType] || leaveTypeColors.default;
@@ -222,8 +218,8 @@ export default function MonthlyLeaveUtilReportPage() {
     updateUrlParams(year, parseInt(newMonth));
   };
 
-  // Fetch monthly data
-  const fetchMonthlyData = async () => {
+  // Fetch monthly data with useCallback
+  const fetchMonthlyData = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/reports/monthly-leave-utilization?year=${year}&month=${month}`);
@@ -238,10 +234,10 @@ export default function MonthlyLeaveUtilReportPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [year, month]);
 
-  // Fetch yearly data
-  const fetchYearlyData = async () => {
+  // Fetch yearly data with useCallback
+  const fetchYearlyData = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/reports/leave-utilization-yearly?year=${year}`);
@@ -254,7 +250,7 @@ export default function MonthlyLeaveUtilReportPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [year]);
 
   // Fetch data based on view mode
   useEffect(() => {
@@ -263,12 +259,11 @@ export default function MonthlyLeaveUtilReportPage() {
     } else {
       fetchYearlyData();
     }
-  }, [year, month, viewMode]);
+  }, [viewMode, fetchMonthlyData, fetchYearlyData]);
 
   // Calculate summary statistics for monthly view
   const totalLeaveDays = departmentData.reduce((sum, dept) => sum + dept.leaveDays, 0);
   const totalEmployees = departmentData.reduce((sum, dept) => sum + dept.employeeCount, 0);
-  const averageUtilization = totalEmployees > 0 ? ((totalLeaveDays / (totalEmployees * 22)) * 100).toFixed(1) : "0.0";
 
   // Filter employee data based on selected department
   const filteredEmployeeData = selectedDepartment
@@ -340,7 +335,6 @@ export default function MonthlyLeaveUtilReportPage() {
               departmentData={departmentData}
               totalLeaveDays={totalLeaveDays}
               totalEmployees={totalEmployees}
-              averageUtilization={averageUtilization}
               selectedDepartment={selectedDepartment}
               setSelectedDepartment={setSelectedDepartment}
               filteredEmployeeData={filteredEmployeeData}
@@ -371,7 +365,6 @@ function MonthlyView({
   departmentData,
   totalLeaveDays,
   totalEmployees,
-  averageUtilization,
   selectedDepartment,
   setSelectedDepartment,
   filteredEmployeeData,
@@ -380,7 +373,6 @@ function MonthlyView({
   departmentData: DepartmentData[];
   totalLeaveDays: number;
   totalEmployees: number;
-  averageUtilization: string;
   selectedDepartment: string | null;
   setSelectedDepartment: (dept: string | null) => void;
   filteredEmployeeData: EmployeeData[];
@@ -712,7 +704,6 @@ function PieChart({
 
     // Create a stable color assignment for departments
     // This ensures the same department always gets the same color
-    const knownColors = Object.keys(departmentColors).filter((dept) => dept !== "default");
     const fallbackColors = [
       "#8B5CF6", // violet-500
       "#D946EF", // fuchsia-500

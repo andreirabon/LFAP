@@ -16,6 +16,7 @@ const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string(),
   role: z.string().min(1, "Role is required"),
+  department: z.string().min(1, "Department is required"),
   sex: z.enum(["Male", "Female"], { required_error: "Sex is required" }),
 });
 
@@ -31,6 +32,7 @@ export async function registerUser(
       email: formData.get("email"),
       password: formData.get("password"),
       role: formData.get("role"),
+      department: formData.get("department"),
       sex: formData.get("sex"),
     };
 
@@ -53,6 +55,7 @@ export async function registerUser(
       email: validatedData.email,
       password: validatedData.password,
       role: validatedData.role,
+      department: validatedData.department,
       sex: validatedData.sex,
     });
     return {

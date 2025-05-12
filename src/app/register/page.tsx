@@ -16,7 +16,9 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("");
   const [sex, setSex] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (state) {
@@ -25,6 +27,26 @@ export default function Register() {
   }, [state]);
 
   const handleSubmit = (formData: FormData) => {
+    const errors: Record<string, string> = {};
+
+    if (!role) {
+      errors.role = "Role is required";
+    }
+
+    if (!department) {
+      errors.department = "Department is required";
+    }
+
+    if (!sex) {
+      errors.sex = "Sex is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors({});
     setIsLoading(true);
     formAction(formData);
   };
@@ -110,7 +132,11 @@ export default function Register() {
                 value={role}
                 onValueChange={setRole}
                 required>
-                <SelectTrigger className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <SelectTrigger
+                  className={cn(
+                    "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                    formErrors.role && "border-red-500",
+                  )}>
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,6 +147,37 @@ export default function Register() {
                   <SelectItem value="Super Admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
+              {formErrors.role && <p className="text-sm text-red-500 mt-1">{formErrors.role}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="department"
+                className="flex items-center gap-2">
+                <User className="h-4 w-4 text-gray-500" />
+                Department
+              </Label>
+              <Select
+                name="department"
+                value={department}
+                onValueChange={setDepartment}
+                required>
+                <SelectTrigger
+                  className={cn(
+                    "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                    formErrors.department && "border-red-500",
+                  )}>
+                  <SelectValue placeholder="Select a department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Human Resources">Human Resources</SelectItem>
+                  <SelectItem value="Information Technology">Information Technology</SelectItem>
+                  <SelectItem value="Finance">Finance</SelectItem>
+                  <SelectItem value="Operations">Operations</SelectItem>
+                  <SelectItem value="Research and Development">Research and Development</SelectItem>
+                  <SelectItem value="Administration">Administration</SelectItem>
+                </SelectContent>
+              </Select>
+              {formErrors.department && <p className="text-sm text-red-500 mt-1">{formErrors.department}</p>}
             </div>
             <div className="space-y-2">
               <Label
@@ -134,7 +191,11 @@ export default function Register() {
                 value={sex}
                 onValueChange={setSex}
                 required>
-                <SelectTrigger className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <SelectTrigger
+                  className={cn(
+                    "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                    formErrors.sex && "border-red-500",
+                  )}>
                   <SelectValue placeholder="Select sex" />
                 </SelectTrigger>
                 <SelectContent>
@@ -142,6 +203,7 @@ export default function Register() {
                   <SelectItem value="Female">Female</SelectItem>
                 </SelectContent>
               </Select>
+              {formErrors.sex && <p className="text-sm text-red-500 mt-1">{formErrors.sex}</p>}
             </div>
             <div className="space-y-2">
               <Label

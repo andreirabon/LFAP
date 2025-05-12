@@ -118,7 +118,7 @@ export default async function ApprovalLogs() {
   const userIds = [...new Set(allApprovedRequests.map((request) => request.userId))];
 
   // Only try to fetch user data if we have any requests
-  let usersMap = new Map<number, UserData>();
+  const usersMap = new Map<number, UserData>();
 
   if (userIds.length > 0) {
     // Fetch user data for these users using the inArray operator
