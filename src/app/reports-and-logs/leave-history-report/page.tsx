@@ -1,3 +1,5 @@
+import { ExportToExcelButton } from "@/components/ExportToExcelButton";
+import { ExportToPdfButton } from "@/components/ExportToPdfButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import db from "@/db/index";
@@ -143,8 +145,12 @@ export default async function ApprovalLogs() {
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="mb-8">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Monitor All Requests ({mappedLeaveRequests.length})</CardTitle>
+          <div className="flex items-center space-x-2">
+            <ExportToExcelButton leaveRequests={mappedLeaveRequests} />
+            <ExportToPdfButton leaveRequests={mappedLeaveRequests} />
+          </div>
         </CardHeader>
         <CardContent>
           {mappedLeaveRequests.length > 0 ? (
